@@ -1,517 +1,433 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Velocímetro por Sensores</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            color: white;
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        .card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-        }
-        
-        .speed-display {
-            text-align: center;
-            padding: 30px 20px;
-        }
-        
-        .speed-value {
-            font-size: 3.5rem;
-            font-weight: bold;
-            margin: 15px 0;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-        
-        .unit {
-            font-size: 1.2rem;
-            opacity: 0.8;
-        }
-        
-        .axis-display {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-        }
-        
-        .axis {
-            text-align: center;
-            flex: 1;
-        }
-        
-        .axis-value {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        
-        .chart-container {
-            height: 150px;
-            margin-top: 15px;
-        }
-        
-        canvas {
-            width: 100%;
-            height: 100%;
-            border-radius: 10px;
-        }
-        
-        .settings {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .setting-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        input[type="number"] {
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-size: 1rem;
-        }
-        
-        input[type="number"]:focus {
-            outline: 2px solid rgba(255, 255, 255, 0.5);
-        }
-        
-        .status {
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        
-        .moving {
-            background: rgba(76, 175, 80, 0.3);
-            color: #a5d6a7;
-        }
-        
-        .stationary {
-            background: rgba(244, 67, 54, 0.3);
-            color: #ef9a9a;
-        }
-        
-        .instructions {
-            font-size: 0.9rem;
-            text-align: center;
-            opacity: 0.8;
-            margin-top: 10px;
-        }
-        
-        .permission-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-        
-        .permission-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        @media (max-width: 500px) {
-            .speed-value {
-                font-size: 2.8rem;
-            }
-            
-            .axis-value {
-                font-size: 1rem;
-            }
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<title>Velocidad desde Acelerómetro / Giroscopio — Mobile</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#111827; --accent:#06b6d4; --muted:#94a3b8; --glass: rgba(255,255,255,0.04);
+  }
+  html,body{height:100%; margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg, #071023 0%, #081226 100%); color:#e6eef6;}
+  .app{max-width:900px; margin:12px auto; padding:12px; box-sizing:border-box;}
+  .header{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .title{font-size:1.05rem; font-weight:600;}
+  .controls{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px;}
+  .card{background:var(--card); padding:10px; border-radius:12px; box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+  label{display:block; font-size:0.78rem; color:var(--muted); margin-bottom:6px;}
+  input[type=range]{width:100%;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .big-readout{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .stat{background:var(--glass); padding:10px; border-radius:8px; min-width:110px; text-align:center;}
+  .stat .num{font-weight:700; font-size:1.05rem;}
+  .stat .sub{font-size:0.72rem; color:var(--muted);}
+  .chart-wrap{margin-top:12px;}
+  canvas{width:100%; height:180px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); border-radius:8px; display:block;}
+  .btns{display:flex; gap:8px; margin-left:auto;}
+  button{background:var(--accent); color:#052024; border:none; padding:8px 10px; border-radius:10px; font-weight:600; cursor:pointer;}
+  .small{font-size:0.82rem; color:var(--muted);}
+  .footer{margin-top:12px; font-size:0.78rem; color:var(--muted);}
+  .grid3{display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin-top:8px;}
+  .input-row{display:flex; gap:8px; align-items:center;}
+  input[type=number]{width:100%; padding:6px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); background:transparent; color:inherit;}
+  @media (max-width:520px){
+    .controls{grid-template-columns:1fr;}
+    .grid3{grid-template-columns:repeat(1,1fr);}
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Velocímetro por Sensores</h1>
-            <p>Usa el acelerómetro y giroscopio para calcular velocidad</p>
-        </header>
-        
-        <div class="card speed-display">
-            <h2>Velocidad Actual</h2>
-            <div class="speed-value">0.00 <span class="unit">m/s</span></div>
-            
-            <div class="axis-display">
-                <div class="axis">
-                    <div>X</div>
-                    <div class="axis-value">0.00</div>
-                </div>
-                <div class="axis">
-                    <div>Y</div>
-                    <div class="axis-value">0.00</div>
-                </div>
-                <div class="axis">
-                    <div>Z</div>
-                    <div class="axis-value">0.00</div>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <canvas id="speedChart"></canvas>
-            </div>
-            
-            <div id="movementStatus" class="status stationary">SIN MOVIMIENTO</div>
-        </div>
-        
-        <div class="card settings">
-            <h2>Ajustes</h2>
-            
-            <div class="setting-group">
-                <label for="threshold">Umbral de quietud (m/s²):</label>
-                <input type="number" id="threshold" value="0.2" step="0.05" min="0.05" max="1.0">
-            </div>
-            
-            <div class="setting-group">
-                <label for="quietTime">Tiempo para considerar quietud (ms):</label>
-                <input type="number" id="quietTime" value="1000" step="100" min="500" max="5000">
-            </div>
-            
-            <div class="setting-group">
-                <label for="gravityCompensation">Compensación de gravedad:</label>
-                <select id="gravityCompensation">
-                    <option value="true">Activada</option>
-                    <option value="false">Desactivada</option>
-                </select>
-            </div>
-            
-            <button id="resetBtn" class="permission-btn">Reiniciar Velocidad</button>
-        </div>
-        
-        <div class="instructions">
-            <p>Mueve tu teléfono para ver los cambios en la velocidad calculada.</p>
-            <p>Los valores por debajo del umbral durante el tiempo establecido reinician la velocidad a cero.</p>
-        </div>
+<div class="app">
+  <div class="header">
+    <div class="title">Velocidad desde sensores (Acelerómetro + Giroscopio)</div>
+    <div class="btns">
+      <button id="permBtn">Solicitar permiso</button>
+      <button id="resetBtn">Resetear</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="card">
+      <label>Umbral de quietud (aceleración |m/s²|) — cuando la acc. linear < este valor se considera "quieto"</label>
+      <div class="input-row">
+        <input id="threshold" type="range" min="0.01" max="1.5" step="0.01" value="0.12">
+        <input id="thresholdNum" type="number" min="0.01" max="3" step="0.01" value="0.12">
+      </div>
+      <div class="small">Valor sugerido para un móvil sostenido en la mano ~ 0.08 — 0.2 m/s²</div>
     </div>
 
-    <script>
-        // Elementos de la interfaz
-        const speedValueElement = document.querySelector('.speed-value');
-        const axisXElement = document.querySelector('.axis:nth-child(1) .axis-value');
-        const axisYElement = document.querySelector('.axis:nth-child(2) .axis-value');
-        const axisZElement = document.querySelector('.axis:nth-child(3) .axis-value');
-        const movementStatusElement = document.getElementById('movementStatus');
-        const thresholdInput = document.getElementById('threshold');
-        const quietTimeInput = document.getElementById('quietTime');
-        const gravityCompensationSelect = document.getElementById('gravityCompensation');
-        const resetBtn = document.getElementById('resetBtn');
-        const speedChartCanvas = document.getElementById('speedChart');
-        
-        // Variables para el cálculo de velocidad
-        let velocity = { x: 0, y: 0, z: 0 };
-        let lastAcceleration = { x: 0, y: 0, z: 0 };
-        let lastTime = 0;
-        let gravity = { x: 0, y: 0, z: 9.81 }; // Gravedad por defecto
-        let isStationary = false;
-        let stationaryStartTime = 0;
-        
-        // Historial de velocidad para la gráfica (3 segundos)
-        let speedHistory = [];
-        const historyDuration = 3000; // 3 segundos en ms
-        let chart = null;
-        
-        // Inicializar gráfica
-        function initChart() {
-            const ctx = speedChartCanvas.getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Velocidad (m/s)',
-                        data: [],
-                        borderColor: 'rgba(255, 255, 255, 0.8)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            display: true,
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            },
-                            ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            }
-                        },
-                        y: {
-                            display: true,
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            },
-                            ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            },
-                            suggestedMin: 0,
-                            suggestedMax: 5
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'rgba(255, 255, 255, 0.8)'
-                            }
-                        }
-                    }
-                }
-            });
+    <div class="card">
+      <label>Tiempo para considerar quietud (ms)</label>
+      <div class="input-row">
+        <input id="holdTime" type="range" min="50" max="1000" step="10" value="200">
+        <input id="holdTimeNum" type="number" min="50" max="2000" step="10" value="200">
+      </div>
+      <div class="small">Duración continuada por debajo del umbral para reiniciar velocidad a 0</div>
+    </div>
+
+    <div class="card">
+      <label>Constante filtro gravedad (alpha) — mayor alpha = gravedad estimada más lenta</label>
+      <div class="input-row">
+        <input id="alpha" type="range" min="0.5" max="0.98" step="0.01" value="0.92">
+        <input id="alphaNum" type="number" min="0.5" max="0.99" step="0.01" value="0.92">
+      </div>
+      <div class="small">Ajusta para mejores resultados según tu dispositivo</div>
+    </div>
+
+    <div class="card">
+      <label>Opciones</label>
+      <div class="row" style="justify-content:space-between;">
+        <div><input id="autoZero" type="checkbox" checked> <span class="small">Auto-zero cuando quietud</span></div>
+        <div><input id="showComponents" type="checkbox" checked> <span class="small">Mostrar componentes X/Y/Z</span></div>
+      </div>
+      <div style="margin-top:8px;"><button id="calibrateBtn">Calibrar (capturar sesgo aceleración)</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <div class="small">Velocidad (ventana 3s) — magnitud y componentes</div>
+        <div class="big-readout">
+          <div class="stat"><div class="num" id="vMag">0.000 m/s</div><div class="sub">|v|</div></div>
+          <div class="stat" id="vxStat"><div class="num" id="vx">0.000</div><div class="sub">v<sub>x</sub> (m/s)</div></div>
+          <div class="stat" id="vyStat"><div class="num" id="vy">0.000</div><div class="sub">v<sub>y</sub> (m/s)</div></div>
+          <div class="stat" id="vzStat"><div class="num" id="vz">0.000</div><div class="sub">v<sub>z</sub> (m/s)</div></div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="small">Sample rate estimado:</div>
+        <div style="font-weight:700;" id="srate">— Hz</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap" style="margin-top:12px;">
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="footer">Última aceleración linear: <span id="lastAcc">0,0,0</span> m/s² — RotRate: <span id="lastRot">—</span></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---- Config / estado ----
+  const WINDOW_MS = 3000; // ventana 3s para el gráfico
+  let gravity = {x:0,y:0,z:0}; // estimación de gravedad
+  let bias = {x:0,y:0,z:0}; // sesgo calibrado (opcional)
+  let v = {x:0,y:0,z:0}; // velocidad integrada
+  let lastTs = null;
+  let samples = []; // {t, vx, vy, vz, mag}
+  let lastLinearAcc = {x:0,y:0,z:0};
+  let lastRotRate = null;
+  let sampleCount = 0;
+  let srate = 0, srateLastTime = performance.now();
+
+  // UI elements
+  const threshold = document.getElementById('threshold');
+  const thresholdNum = document.getElementById('thresholdNum');
+  const holdTime = document.getElementById('holdTime');
+  const holdTimeNum = document.getElementById('holdTimeNum');
+  const alphaRange = document.getElementById('alpha');
+  const alphaNum = document.getElementById('alphaNum');
+  const permBtn = document.getElementById('permBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const calibrateBtn = document.getElementById('calibrateBtn');
+  const autoZero = document.getElementById('autoZero');
+  const showComponents = document.getElementById('showComponents');
+  const vMagEl = document.getElementById('vMag');
+  const vxEl = document.getElementById('vx');
+  const vyEl = document.getElementById('vy');
+  const vzEl = document.getElementById('vz');
+  const lastAccEl = document.getElementById('lastAcc');
+  const lastRotEl = document.getElementById('lastRot');
+  const srateEl = document.getElementById('srate');
+
+  // canvas
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+
+  // resize canvas for devicePixelRatio
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // sync numeric inputs
+  threshold.addEventListener('input', ()=> thresholdNum.value = threshold.value);
+  thresholdNum.addEventListener('change', ()=> threshold.value = thresholdNum.value);
+  holdTime.addEventListener('input', ()=> holdTimeNum.value = holdTime.value);
+  holdTimeNum.addEventListener('change', ()=> holdTime.value = holdTimeNum.value);
+  alphaRange.addEventListener('input', ()=> alphaNum.value = alphaRange.value);
+  alphaNum.addEventListener('change', ()=> alphaRange.value = alphaNum.value);
+
+  // ---- Stationary detection ----
+  let stationarySince = null;
+  function checkStationary(now, linearMag) {
+    const thr = parseFloat(threshold.value);
+    const hold = parseInt(holdTime.value, 10);
+    if (linearMag <= thr) {
+      if (stationarySince === null) stationarySince = now;
+      else {
+        if ((now - stationarySince) >= hold) {
+          return true;
         }
-        
-        // Actualizar gráfica
-        function updateChart() {
-            if (!chart) return;
-            
-            const now = Date.now();
-            const cutoffTime = now - historyDuration;
-            
-            // Filtrar datos antiguos
-            speedHistory = speedHistory.filter(point => point.time > cutoffTime);
-            
-            // Actualizar datos de la gráfica
-            chart.data.labels = speedHistory.map(point => 
-                ((point.time - cutoffTime) / 1000).toFixed(1) + 's'
-            );
-            chart.data.datasets[0].data = speedHistory.map(point => point.speed);
-            
-            chart.update('none');
+      }
+    } else {
+      stationarySince = null;
+    }
+    return false;
+  }
+
+  // ---- Calibración simple: captura sesgo estático ----
+  calibrateBtn.addEventListener('click', ()=>{
+    // captura media de aceleraciones recientes (si las hay)
+    if (samples.length === 0) {
+      alert('No hay datos aún. Mueve el teléfono a una posición estable y vuelve a intentar.');
+      return;
+    }
+    // tomar últimas 100 lecturas de aceleración linear (si existen)
+    const N = Math.min(100, samples.length);
+    let sx=0, sy=0, sz=0;
+    for (let i = samples.length - N; i < samples.length; i++){
+      const s = samples[i];
+      sx += s.ax || 0;
+      sy += s.ay || 0;
+      sz += s.az || 0;
+    }
+    bias.x = sx / N;
+    bias.y = sy / N;
+    bias.z = sz / N;
+    alert('Calibración completada. Sesgo guardado.');
+  });
+
+  // ---- Reset ----
+  resetBtn.addEventListener('click', ()=>{
+    v = {x:0,y:0,z:0};
+    samples = [];
+    lastTs = null;
+    gravity = {x:0,y:0,z:0};
+    bias = {x:0,y:0,z:0};
+    stationarySince = null;
+    updateUI();
+  });
+
+  // ---- Permissions for iOS ----
+  permBtn.addEventListener('click', async ()=>{
+    // iOS 13+ requires permission gesture
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const res = await DeviceMotionEvent.requestPermission();
+        if (res === 'granted') {
+          permBtn.textContent = 'Permiso concedido';
+        } else {
+          permBtn.textContent = 'Permiso denegado';
         }
-        
-        // Calcular la magnitud de un vector
-        function magnitude(vector) {
-            return Math.sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
-        }
-        
-        // Procesar datos del acelerómetro
-        function handleMotionEvent(event) {
-            const acceleration = event.accelerationIncludingGravity;
-            const rotation = event.rotationRate;
-            const currentTime = Date.now();
-            
-            if (!lastTime) {
-                lastTime = currentTime;
-                lastAcceleration = { 
-                    x: acceleration.x || 0, 
-                    y: acceleration.y || 0, 
-                    z: acceleration.z || 0 
-                };
-                return;
-            }
-            
-            // Calcular delta de tiempo en segundos
-            const dt = (currentTime - lastTime) / 1000;
-            
-            // Compensar gravedad si está activado
-            let linearAcceleration = { x: 0, y: 0, z: 0 };
-            const useGravityCompensation = gravityCompensationSelect.value === 'true';
-            
-            if (useGravityCompensation) {
-                linearAcceleration.x = (acceleration.x || 0) - gravity.x;
-                linearAcceleration.y = (acceleration.y || 0) - gravity.y;
-                linearAcceleration.z = (acceleration.z || 0) - gravity.z;
-            } else {
-                linearAcceleration.x = acceleration.x || 0;
-                linearAcceleration.y = acceleration.y || 0;
-                linearAcceleration.z = acceleration.z || 0;
-            }
-            
-            // Integrar para obtener velocidad (método trapezoidal para mejor precisión)
-            velocity.x += (lastAcceleration.x + linearAcceleration.x) * 0.5 * dt;
-            velocity.y += (lastAcceleration.y + linearAcceleration.y) * 0.5 * dt;
-            velocity.z += (lastAcceleration.z + linearAcceleration.z) * 0.5 * dt;
-            
-            // Actualizar aceleración anterior
-            lastAcceleration = { ...linearAcceleration };
-            lastTime = currentTime;
-            
-            // Obtener umbrales de los inputs
-            const threshold = parseFloat(thresholdInput.value);
-            const quietTime = parseInt(quietTimeInput.value);
-            
-            // Verificar si estamos en estado estacionario
-            const accMagnitude = magnitude(linearAcceleration);
-            
-            if (accMagnitude < threshold) {
-                if (!isStationary) {
-                    stationaryStartTime = currentTime;
-                    isStationary = true;
-                } else if (currentTime - stationaryStartTime > quietTime) {
-                    // Reiniciar velocidad si hemos estado quietos el tiempo suficiente
-                    velocity = { x: 0, y: 0, z: 0 };
-                }
-            } else {
-                isStationary = false;
-            }
-            
-            // Calcular velocidad total
-            const totalSpeed = magnitude(velocity);
-            
-            // Actualizar interfaz
-            speedValueElement.textContent = totalSpeed.toFixed(2) + ' m/s';
-            axisXElement.textContent = velocity.x.toFixed(2);
-            axisYElement.textContent = velocity.y.toFixed(2);
-            axisZElement.textContent = velocity.z.toFixed(2);
-            
-            // Actualizar estado de movimiento
-            if (isStationary && (currentTime - stationaryStartTime > quietTime)) {
-                movementStatusElement.textContent = 'SIN MOVIMIENTO';
-                movementStatusElement.className = 'status stationary';
-            } else {
-                movementStatusElement.textContent = 'EN MOVIMIENTO';
-                movementStatusElement.className = 'status moving';
-            }
-            
-            // Actualizar historial de velocidad
-            speedHistory.push({
-                time: currentTime,
-                speed: totalSpeed
-            });
-            
-            // Actualizar gráfica
-            updateChart();
-        }
-        
-        // Calibrar gravedad
-        function calibrateGravity() {
-            if (window.DeviceMotionEvent) {
-                // Tomar muestras durante 1 segundo para calcular la gravedad
-                let samples = [];
-                let sampleCount = 0;
-                const maxSamples = 10;
-                
-                const sampleInterval = setInterval(() => {
-                    window.addEventListener('devicemotion', function calibrateHandler(event) {
-                        const acc = event.accelerationIncludingGravity;
-                        if (acc) {
-                            samples.push({
-                                x: acc.x || 0,
-                                y: acc.y || 0,
-                                z: acc.z || 0
-                            });
-                            sampleCount++;
-                            
-                            if (sampleCount >= maxSamples) {
-                                window.removeEventListener('devicemotion', calibrateHandler);
-                                clearInterval(sampleInterval);
-                                
-                                // Calcular promedio
-                                gravity = {
-                                    x: samples.reduce((sum, sample) => sum + sample.x, 0) / samples.length,
-                                    y: samples.reduce((sum, sample) => sum + sample.y, 0) / samples.length,
-                                    z: samples.reduce((sum, sample) => sum + sample.z, 0) / samples.length
-                                };
-                                
-                                alert('Gravedad calibrada correctamente');
-                            }
-                        }
-                    }, { once: true });
-                }, 100);
-            }
-        }
-        
-        // Reiniciar velocidad
-        function resetVelocity() {
-            velocity = { x: 0, y: 0, z: 0 };
-            lastAcceleration = { x: 0, y: 0, z: 0 };
-            lastTime = 0;
-            speedHistory = [];
-            updateChart();
-        }
-        
-        // Solicitar permisos y inicializar
-        function initApp() {
-            // Inicializar gráfica
-            initChart();
-            
-            // Configurar event listeners
-            resetBtn.addEventListener('click', resetVelocity);
-            
-            // Solicitar permisos de sensores
-            if (typeof DeviceMotionEvent !== 'undefined' && 
-                typeof DeviceMotionEvent.requestPermission === 'function') {
-                // iOS 13+ requiere solicitud de permiso
-                DeviceMotionEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('devicemotion', handleMotionEvent);
-                            calibrateGravity();
-                        } else {
-                            alert('Se necesitan permisos de sensores para usar esta aplicación');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                // Navegadores que no requieren solicitud explícita
-                window.addEventListener('devicemotion', handleMotionEvent);
-                
-                // Calibrar gravedad después de un breve retraso
-                setTimeout(calibrateGravity, 1000);
-            }
-        }
-        
-        // Inicializar la aplicación cuando se carga la página
-        window.addEventListener('load', initApp);
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      } catch (err) {
+        console.error(err);
+        alert('Error solicitando permiso: ' + err);
+      }
+    } else {
+      alert('Tu navegador no requiere permiso explícito (o no lo soporta).');
+    }
+  });
+
+  // ---- DeviceMotion handling ----
+  window.addEventListener('devicemotion', (e) => {
+    const now = performance.now();
+    // prefer event.acceleration (sin gravedad) si disponible
+    // else usar accelerationIncludingGravity y estimar gravedad por low-pass
+    let ax = null, ay = null, az = null;
+    const hasAcc = e.acceleration && (e.acceleration.x !== null);
+    if (hasAcc) {
+      ax = e.acceleration.x;
+      ay = e.acceleration.y;
+      az = e.acceleration.z;
+    } else if (e.accelerationIncludingGravity) {
+      // apply low-pass to estimate gravity
+      const inc = e.accelerationIncludingGravity;
+      const aX = inc.x || 0;
+      const aY = inc.y || 0;
+      const aZ = inc.z || 0;
+
+      // dynamic alpha: if device is rotating, decrease alpha to respond quicker
+      const rot = e.rotationRate;
+      let rotMag = 0;
+      if (rot) {
+        rotMag = Math.abs(rot.alpha || 0) + Math.abs(rot.beta || 0) + Math.abs(rot.gamma || 0);
+      }
+      // map rotMag to a small factor to lower alpha when rotation high
+      const rotFactor = Math.min(1, rotMag / 90); // arbitrary mapping
+      const baseAlpha = parseFloat(alphaRange.value);
+      const adaptiveAlpha = baseAlpha - rotFactor * 0.25; // allow up to 0.25 decrease while rotating
+      const alpha = Math.max(0.5, Math.min(0.99, adaptiveAlpha)); // clamp
+
+      gravity.x = alpha * gravity.x + (1 - alpha) * aX;
+      gravity.y = alpha * gravity.y + (1 - alpha) * aY;
+      gravity.z = alpha * gravity.z + (1 - alpha) * aZ;
+
+      ax = aX - gravity.x;
+      ay = aY - gravity.y;
+      az = aZ - gravity.z;
+    } else {
+      // no accelerometer data
+      return;
+    }
+
+    // subtract calibration bias
+    ax -= bias.x || 0;
+    ay -= bias.y || 0;
+    az -= bias.z || 0;
+
+    lastLinearAcc = {x:ax, y:ay, z:az};
+    lastRotRate = e.rotationRate || null;
+
+    // integration
+    let dt = 0;
+    if (lastTs === null) {
+      lastTs = now;
+      dt = 0;
+    } else {
+      dt = (now - lastTs) / 1000; // seconds
+      lastTs = now;
+    }
+    // If dt is reasonable, integrate
+    if (dt > 0 && dt < 0.5) { // ignore huge dt
+      v.x += ax * dt;
+      v.y += ay * dt;
+      v.z += az * dt;
+    }
+
+    // record sample (for chart and calibration)
+    const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+    samples.push({t: now, vx: v.x, vy: v.y, vz: v.z, mag: mag, ax: ax, ay: ay, az: az});
+    // keep only WINDOW_MS + small margin
+    const cutoff = now - WINDOW_MS - 200;
+    while (samples.length && samples[0].t < cutoff) samples.shift();
+
+    // estimate sample rate every second
+    sampleCount++;
+    const nowS = performance.now();
+    if (nowS - srateLastTime >= 1000) {
+      srate = Math.round((sampleCount*1000) / (nowS - srateLastTime));
+      sampleCount = 0;
+      srateLastTime = nowS;
+    }
+
+    // check stationary
+    const linearMag = Math.sqrt(ax*ax + ay*ay + az*az);
+    const isStationary = checkStationary(now, linearMag);
+    if (isStationary && autoZero.checked) {
+      v.x = 0; v.y = 0; v.z = 0;
+      // optionally clear samples to avoid ghost lines
+      samples.push({t: now, vx:0, vy:0, vz:0, mag:0, ax:ax, ay:ay, az:az});
+    }
+
+    // update UI values (numerical)
+    updateUI();
+  }, {passive: true});
+
+  function updateUI(){
+    const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+    vMagEl.textContent = mag.toFixed(3) + ' m/s';
+    vxEl.textContent = v.x.toFixed(4);
+    vyEl.textContent = v.y.toFixed(4);
+    vzEl.textContent = v.z.toFixed(4);
+    lastAccEl.textContent = `${lastLinearAcc.x.toFixed(3)}, ${lastLinearAcc.y.toFixed(3)}, ${lastLinearAcc.z.toFixed(3)}`;
+    lastRotEl.textContent = lastRotRate ? `α:${(lastRotRate.alpha||0).toFixed(1)} β:${(lastRotRate.beta||0).toFixed(1)} γ:${(lastRotRate.gamma||0).toFixed(1)}` : '—';
+    srateEl.textContent = srate ? srate + ' Hz' : '—';
+    // show/hide component stats
+    document.getElementById('vxStat').style.display = showComponents.checked ? 'block' : 'none';
+    document.getElementById('vyStat').style.display = showComponents.checked ? 'block' : 'none';
+    document.getElementById('vzStat').style.display = showComponents.checked ? 'block' : 'none';
+  }
+
+  // ---- Drawing chart (3s window) ----
+  function drawChart(){
+    resizeCanvas();
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0,0,w,h);
+
+    // background grid
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    for (let i=0;i<4;i++){
+      const y = (i+1)/5 * h;
+      ctx.moveTo(0,y); ctx.lineTo(w,y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    const now = performance.now();
+    // draw time axis: from now - WINDOW_MS to now
+    const t0 = now - WINDOW_MS;
+    // draw magnitude as primary line
+    ctx.beginPath();
+    let first = true;
+    for (let i=0;i<samples.length;i++){
+      const s = samples[i];
+      const x = ((s.t - t0) / WINDOW_MS) * w;
+      const y = h - Math.min(h, (s.mag * 50)) / 1 * (h * 0.6); // scale: give room (50 m/s unrealistic but safe)
+      // better scale: map mag to [0,h*0.85] using small factor
+      const magScaled = (s.mag) * 20; // tuned for readability
+      const yy = h - Math.min(h*0.85, magScaled) * (h / (h*1.2));
+      if (first) { ctx.moveTo(x, yy); first=false; } else ctx.lineTo(x, yy);
+    }
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#06b6d4';
+    ctx.stroke();
+
+    // draw vx, vy, vz as thin lines offset (optional)
+    ctx.lineWidth = 1;
+    // vx in dashed
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    first = true;
+    for (let i=0;i<samples.length;i++){
+      const s = samples[i];
+      const x = ((s.t - t0) / WINDOW_MS) * w;
+      const val = s.vx; const scaled = val * 15;
+      const yy = h - Math.min(h*0.5, Math.abs(scaled)) - 6 - (val<0?0:0);
+      if (first) { ctx.moveTo(x, yy); first=false; } else ctx.lineTo(x, yy);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // current timestamp marker at right
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillRect(w-2, 0, 2, h);
+
+    // overlay text
+    ctx.fillStyle = '#e6eef6';
+    ctx.font = '12px system-ui, Arial';
+    ctx.fillText('Ventana ' + (WINDOW_MS/1000) + 's — |v| (m/s)', 8, 14);
+  }
+
+  // animation loop
+  function rafLoop(){
+    drawChart();
+    requestAnimationFrame(rafLoop);
+  }
+  requestAnimationFrame(rafLoop);
+
+  // initial UI update
+  updateUI();
+
+  // ---- Notes / safety ----
+  // - Esta integración es simple y depende del sensor: puede derivar con el tiempo y mostrar drift.
+  // - Para mejorar precisión: sensores nativos (ARKit/ARCore), Kalman filter, y fusión avanzada con giroscopio y magnetómetro.
+  // - El método aquí prioriza baja latencia: integra en cada evento devicemotion usando dt real.
+})();
+</script>
 </body>
 </html>
