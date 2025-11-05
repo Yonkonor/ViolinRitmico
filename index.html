@@ -5,429 +5,177 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
 <title>Velocidad desde Acelerómetro / Giroscopio — Mobile</title>
 <style>
-  :root{
-    --bg:#0f1724; --card:#111827; --accent:#06b6d4; --muted:#94a3b8; --glass: rgba(255,255,255,0.04);
-  }
-  html,body{height:100%; margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg, #071023 0%, #081226 100%); color:#e6eef6;}
-  .app{max-width:900px; margin:12px auto; padding:12px; box-sizing:border-box;}
-  .header{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
-  .title{font-size:1.05rem; font-weight:600;}
-  .controls{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px;}
-  .card{background:var(--card); padding:10px; border-radius:12px; box-shadow:0 6px 20px rgba(2,6,23,0.6);}
-  label{display:block; font-size:0.78rem; color:var(--muted); margin-bottom:6px;}
+  :root{--bg:#0f1724;--card:#111827;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.04);}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#071023,#081226);color:#e6eef6;}
+  .app{max-width:900px;margin:12px auto;padding:12px;box-sizing:border-box;}
+  .header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  button{background:var(--accent);color:#052024;border:none;padding:8px 10px;border-radius:10px;font-weight:600;cursor:pointer;}
+  .controls{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;}
+  .card{background:var(--card);padding:10px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+  label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px;}
   input[type=range]{width:100%;}
-  .row{display:flex; gap:8px; align-items:center;}
-  .big-readout{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
-  .stat{background:var(--glass); padding:10px; border-radius:8px; min-width:110px; text-align:center;}
-  .stat .num{font-weight:700; font-size:1.05rem;}
-  .stat .sub{font-size:0.72rem; color:var(--muted);}
-  .chart-wrap{margin-top:12px;}
-  canvas{width:100%; height:180px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); border-radius:8px; display:block;}
-  .btns{display:flex; gap:8px; margin-left:auto;}
-  button{background:var(--accent); color:#052024; border:none; padding:8px 10px; border-radius:10px; font-weight:600; cursor:pointer;}
-  .small{font-size:0.82rem; color:var(--muted);}
-  .footer{margin-top:12px; font-size:0.78rem; color:var(--muted);}
-  .grid3{display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin-top:8px;}
-  .input-row{display:flex; gap:8px; align-items:center;}
-  input[type=number]{width:100%; padding:6px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); background:transparent; color:inherit;}
-  @media (max-width:520px){
-    .controls{grid-template-columns:1fr;}
-    .grid3{grid-template-columns:repeat(1,1fr);}
-  }
+  .small{font-size:.78rem;color:var(--muted);}
+  .stat{background:var(--glass);padding:10px;border-radius:8px;min-width:110px;text-align:center;}
+  .stat .num{font-weight:700;font-size:1rem;}
+  canvas{width:100%;height:180px;background:rgba(255,255,255,0.02);border-radius:8px;display:block;}
+  @media(max-width:520px){.controls{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 <div class="app">
+
   <div class="header">
-    <div class="title">Velocidad desde sensores (Acelerómetro + Giroscopio)</div>
-    <div class="btns">
-      <button id="permBtn">Solicitar permiso</button>
-      <button id="resetBtn">Resetear</button>
-    </div>
+    <div style="font-weight:600">Velocidad desde sensores</div>
+    <button id="permBtn">Permiso</button>
+    <button id="resetBtn">Resetear</button>
+    <button id="soundBtn">Sonido OFF</button>
   </div>
 
   <div class="controls">
     <div class="card">
-      <label>Umbral de quietud (aceleración |m/s²|) — cuando la acc. linear < este valor se considera "quieto"</label>
-      <div class="input-row">
-        <input id="threshold" type="range" min="0.01" max="1.5" step="0.01" value="0.12">
-        <input id="thresholdNum" type="number" min="0.01" max="3" step="0.01" value="0.12">
-      </div>
-      <div class="small">Valor sugerido para un móvil sostenido en la mano ~ 0.08 — 0.2 m/s²</div>
+      <label>Umbral quietud (m/s²)</label>
+      <input id="threshold" type="range" min="0.01" max="1.5" step="0.01" value="0.12">
+      <input id="thresholdNum" type="number" min="0.01" max="3" step="0.01" value="0.12">
     </div>
 
     <div class="card">
-      <label>Tiempo para considerar quietud (ms)</label>
-      <div class="input-row">
-        <input id="holdTime" type="range" min="50" max="1000" step="10" value="200">
-        <input id="holdTimeNum" type="number" min="50" max="2000" step="10" value="200">
-      </div>
-      <div class="small">Duración continuada por debajo del umbral para reiniciar velocidad a 0</div>
-    </div>
-
-    <div class="card">
-      <label>Constante filtro gravedad (alpha) — mayor alpha = gravedad estimada más lenta</label>
-      <div class="input-row">
-        <input id="alpha" type="range" min="0.5" max="0.98" step="0.01" value="0.92">
-        <input id="alphaNum" type="number" min="0.5" max="0.99" step="0.01" value="0.92">
-      </div>
-      <div class="small">Ajusta para mejores resultados según tu dispositivo</div>
-    </div>
-
-    <div class="card">
-      <label>Opciones</label>
-      <div class="row" style="justify-content:space-between;">
-        <div><input id="autoZero" type="checkbox" checked> <span class="small">Auto-zero cuando quietud</span></div>
-        <div><input id="showComponents" type="checkbox" checked> <span class="small">Mostrar componentes X/Y/Z</span></div>
-      </div>
-      <div style="margin-top:8px;"><button id="calibrateBtn">Calibrar (capturar sesgo aceleración)</button></div>
+      <label>Tiempo quietud (ms)</label>
+      <input id="holdTime" type="range" min="50" max="1000" step="10" value="200">
+      <input id="holdTimeNum" type="number" min="50" max="2000" step="10" value="200">
     </div>
   </div>
 
   <div class="card">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <div>
-        <div class="small">Velocidad (ventana 3s) — magnitud y componentes</div>
-        <div class="big-readout">
-          <div class="stat"><div class="num" id="vMag">0.000 m/s</div><div class="sub">|v|</div></div>
-          <div class="stat" id="vxStat"><div class="num" id="vx">0.000</div><div class="sub">v<sub>x</sub> (m/s)</div></div>
-          <div class="stat" id="vyStat"><div class="num" id="vy">0.000</div><div class="sub">v<sub>y</sub> (m/s)</div></div>
-          <div class="stat" id="vzStat"><div class="num" id="vz">0.000</div><div class="sub">v<sub>z</sub> (m/s)</div></div>
-        </div>
-      </div>
-      <div style="text-align:right;">
-        <div class="small">Sample rate estimado:</div>
-        <div style="font-weight:700;" id="srate">— Hz</div>
-      </div>
-    </div>
-
-    <div class="chart-wrap" style="margin-top:12px;">
-      <canvas id="chart"></canvas>
-    </div>
-    <div class="footer">Última aceleración linear: <span id="lastAcc">0,0,0</span> m/s² — RotRate: <span id="lastRot">—</span></div>
+    <label>Alpha filtro gravedad</label>
+    <input id="alpha" type="range" min="0.5" max="0.98" step="0.01" value="0.92">
+    <input id="alphaNum" type="number" min="0.5" max="0.99" step="0.01" value="0.92">
+    <label><input id="autoZero" type="checkbox" checked> Auto-zero suave</label>
+    <label><input id="showComponents" type="checkbox" checked> Mostrar XYZ</label>
+    <button id="calibrateBtn">Calibrar</button>
   </div>
+
+  <div class="card">
+    <div class="stat"><div class="num" id="vMag">0.000 m/s</div>|v|</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <div class="stat" id="vxStat"><div class="num" id="vx">0.000</div>x</div>
+      <div class="stat" id="vyStat"><div class="num" id="vy">0.000</div>y</div>
+      <div class="stat" id="vzStat"><div class="num" id="vz">0.000</div>z</div>
+    </div>
+    <div style="margin-top:4px;font-size:.8rem">Rate: <span id="srate">—</span> Hz</div>
+    <canvas id="chart"></canvas>
+  </div>
+
 </div>
 
 <script>
-(() => {
-  // ---- Config / estado ----
-  const WINDOW_MS = 3000; // ventana 3s para el gráfico
-  let gravity = {x:0,y:0,z:0}; // estimación de gravedad
-  let bias = {x:0,y:0,z:0}; // sesgo calibrado (opcional)
-  let v = {x:0,y:0,z:0}; // velocidad integrada
-  let lastTs = null;
-  let samples = []; // {t, vx, vy, vz, mag}
-  let lastLinearAcc = {x:0,y:0,z:0};
-  let lastRotRate = null;
-  let sampleCount = 0;
-  let srate = 0, srateLastTime = performance.now();
+let gravity={x:0,y:0,z:0},bias={x:0,y:0,z:0},v={x:0,y:0,z:0},lastTs=null,samples=[];
+let stationarySince=null,srate=0,sampleCount=0,srateLastTime=performance.now();
+const WINDOW_MS=3000,DECAY=0.92;
 
-  // UI elements
-  const threshold = document.getElementById('threshold');
-  const thresholdNum = document.getElementById('thresholdNum');
-  const holdTime = document.getElementById('holdTime');
-  const holdTimeNum = document.getElementById('holdTimeNum');
-  const alphaRange = document.getElementById('alpha');
-  const alphaNum = document.getElementById('alphaNum');
-  const permBtn = document.getElementById('permBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const calibrateBtn = document.getElementById('calibrateBtn');
-  const autoZero = document.getElementById('autoZero');
-  const showComponents = document.getElementById('showComponents');
-  const vMagEl = document.getElementById('vMag');
-  const vxEl = document.getElementById('vx');
-  const vyEl = document.getElementById('vy');
-  const vzEl = document.getElementById('vz');
-  const lastAccEl = document.getElementById('lastAcc');
-  const lastRotEl = document.getElementById('lastRot');
-  const srateEl = document.getElementById('srate');
+// sonido
+let audioCtx=null,osc=null,gainNode=null,soundEnabled=false;
 
-  // canvas
-  const canvas = document.getElementById('chart');
-  const ctx = canvas.getContext('2d');
+// UI refs
+const th=threshold,thN=thresholdNum,ht=holdTime,htN=holdTimeNum,a=alpha,aN=alphaNum;
+const vMagEl=vMag,vxEl=vx,vyEl=vy,vzEl=vz,lastAccEl=lastAcc,lastRotEl=lastRot,srateEl=srate;
 
-  // resize canvas for devicePixelRatio
-  function resizeCanvas(){
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
+threshold.oninput=()=>thN.value=th.value; thN.onchange=()=>th.value=thN.value;
+holdTime.oninput=()=>htN.value=ht.value; htN.onchange=()=>ht.value=htN.value;
+alpha.oninput=()=>aN.value=a.value; aN.onchange=()=>a.value=aN.value;
+
+soundBtn.onclick=()=>{
+  if(!soundEnabled){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    osc=audioCtx.createOscillator(); gainNode=audioCtx.createGain();
+    osc.frequency.value=800; gainNode.gain.value=0;
+    osc.connect(gainNode).connect(audioCtx.destination); osc.start();
+    soundEnabled=true; soundBtn.textContent="Sonido ON";
+  } else {
+    osc.stop(); audioCtx.close(); soundEnabled=false; soundBtn.textContent="Sonido OFF";
   }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+};
 
-  // sync numeric inputs
-  threshold.addEventListener('input', ()=> thresholdNum.value = threshold.value);
-  thresholdNum.addEventListener('change', ()=> threshold.value = thresholdNum.value);
-  holdTime.addEventListener('input', ()=> holdTimeNum.value = holdTime.value);
-  holdTimeNum.addEventListener('change', ()=> holdTime.value = holdTimeNum.value);
-  alphaRange.addEventListener('input', ()=> alphaNum.value = alphaRange.value);
-  alphaNum.addEventListener('change', ()=> alphaRange.value = alphaNum.value);
+permBtn.onclick=async()=>{
+  if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){
+    let r=await DeviceMotionEvent.requestPermission(); alert(r);
+  }};
 
-  // ---- Stationary detection ----
-  let stationarySince = null;
-  function checkStationary(now, linearMag) {
-    const thr = parseFloat(threshold.value);
-    const hold = parseInt(holdTime.value, 10);
-    if (linearMag <= thr) {
-      if (stationarySince === null) stationarySince = now;
-      else {
-        if ((now - stationarySince) >= hold) {
-          return true;
-        }
-      }
-    } else {
-      stationarySince = null;
-    }
-    return false;
+resetBtn.onclick=()=>{v={x:0,y:0,z:0};samples=[];gravity={x:0,y:0,z:0};bias={x:0,y:0,z:0};};
+
+calibrateBtn.onclick=()=>{
+  if(samples.length<20){alert("Poner quieto y esperar...");return;}
+  let sx=0,sy=0,sz=0,N=Math.min(100,samples.length);
+  for(let i=samples.length-N;i<samples.length;i++){sx+=samples[i].ax;sy+=samples[i].ay;sz+=samples[i].az;}
+  bias.x=sx/N; bias.y=sy/N; bias.z=sz/N; alert("Calibrado");
+};
+
+function checkStationary(now,m){
+  let thr=parseFloat(th.value),hold=+ht.value;
+  if(m<=thr){if(!stationarySince) stationarySince=now;
+    if(now-stationarySince>=hold)return true;} else stationarySince=null;
+  return false;
+}
+
+function updateUI(){
+  const mag=Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z);
+  vMagEl.textContent=mag.toFixed(3)+" m/s"; vxEl.textContent=v.x.toFixed(4);
+  vyEl.textContent=v.y.toFixed(4); vzEl.textContent=v.z.toFixed(4);
+  srateEl.textContent=srate?" "+srate:"—";
+  vxStat.style.display=showComponents.checked?"block":"none";
+  vyStat.style.display=showComponents.checked?"block":"none";
+  vzStat.style.display=showComponents.checked?"block":"none";
+
+  if(soundEnabled&&gainNode){
+    const level=Math.min(1,mag*0.8);
+    gainNode.gain.setTargetAtTime(level,audioCtx.currentTime,0.02);
   }
+}
 
-  // ---- Calibración simple: captura sesgo estático ----
-  calibrateBtn.addEventListener('click', ()=>{
-    // captura media de aceleraciones recientes (si las hay)
-    if (samples.length === 0) {
-      alert('No hay datos aún. Mueve el teléfono a una posición estable y vuelve a intentar.');
-      return;
-    }
-    // tomar últimas 100 lecturas de aceleración linear (si existen)
-    const N = Math.min(100, samples.length);
-    let sx=0, sy=0, sz=0;
-    for (let i = samples.length - N; i < samples.length; i++){
-      const s = samples[i];
-      sx += s.ax || 0;
-      sy += s.ay || 0;
-      sz += s.az || 0;
-    }
-    bias.x = sx / N;
-    bias.y = sy / N;
-    bias.z = sz / N;
-    alert('Calibración completada. Sesgo guardado.');
-  });
+const canvas=chart,ctx=canvas.getContext("2d");
+function resize(){const r=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  canvas.width=r.width*dpr;canvas.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);} resize();
+addEventListener("resize",resize);
 
-  // ---- Reset ----
-  resetBtn.addEventListener('click', ()=>{
-    v = {x:0,y:0,z:0};
-    samples = [];
-    lastTs = null;
-    gravity = {x:0,y:0,z:0};
-    bias = {x:0,y:0,z:0};
-    stationarySince = null;
-    updateUI();
-  });
+addEventListener("devicemotion",e=>{
+  const now=performance.now(); let ax,ay,az;
+  if(e.acceleration&&e.acceleration.x!=null){ax=e.acceleration.x;ay=e.acceleration.y;az=e.acceleration.z;}
+  else if(e.accelerationIncludingGravity){
+    let inc=e.accelerationIncludingGravity,rot=e.rotationRate||{},rotMag=Math.abs(rot.alpha||0)+Math.abs(rot.beta||0)+Math.abs(rot.gamma||0);
+    let base=+a.value,alphaDyn=Math.max(.5,Math.min(.99,base-(Math.min(1,rotMag/90))*0.25));
+    gravity.x=alphaDyn*gravity.x+(1-alphaDyn)*(inc.x||0);
+    gravity.y=alphaDyn*gravity.y+(1-alphaDyn)*(inc.y||0);
+    gravity.z=alphaDyn*gravity.z+(1-alphaDyn)*(inc.z||0);
+    ax=(inc.x||0)-gravity.x; ay=(inc.y||0)-gravity.y; az=(inc.z||0)-gravity.z;
+  } else return;
 
-  // ---- Permissions for iOS ----
-  permBtn.addEventListener('click', async ()=>{
-    // iOS 13+ requires permission gesture
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      try {
-        const res = await DeviceMotionEvent.requestPermission();
-        if (res === 'granted') {
-          permBtn.textContent = 'Permiso concedido';
-        } else {
-          permBtn.textContent = 'Permiso denegado';
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Error solicitando permiso: ' + err);
-      }
-    } else {
-      alert('Tu navegador no requiere permiso explícito (o no lo soporta).');
-    }
-  });
+  ax-=bias.x;ay-=bias.y;az-=bias.z;
+  let dt=lastTs?(now-lastTs)/1000:0; lastTs=now;
+  if(dt>0&&dt<.5){v.x+=ax*dt;v.y+=ay*dt;v.z+=az*dt;}
 
-  // ---- DeviceMotion handling ----
-  window.addEventListener('devicemotion', (e) => {
-    const now = performance.now();
-    // prefer event.acceleration (sin gravedad) si disponible
-    // else usar accelerationIncludingGravity y estimar gravedad por low-pass
-    let ax = null, ay = null, az = null;
-    const hasAcc = e.acceleration && (e.acceleration.x !== null);
-    if (hasAcc) {
-      ax = e.acceleration.x;
-      ay = e.acceleration.y;
-      az = e.acceleration.z;
-    } else if (e.accelerationIncludingGravity) {
-      // apply low-pass to estimate gravity
-      const inc = e.accelerationIncludingGravity;
-      const aX = inc.x || 0;
-      const aY = inc.y || 0;
-      const aZ = inc.z || 0;
+  const mag=Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z);
+  samples.push({t:now,vx:v.x,vy:v.y,vz:v.z,mag,ax,ay,az});
+  let cut=now-WINDOW_MS-200; while(samples.length&&samples[0].t<cut)samples.shift();
 
-      // dynamic alpha: if device is rotating, decrease alpha to respond quicker
-      const rot = e.rotationRate;
-      let rotMag = 0;
-      if (rot) {
-        rotMag = Math.abs(rot.alpha || 0) + Math.abs(rot.beta || 0) + Math.abs(rot.gamma || 0);
-      }
-      // map rotMag to a small factor to lower alpha when rotation high
-      const rotFactor = Math.min(1, rotMag / 90); // arbitrary mapping
-      const baseAlpha = parseFloat(alphaRange.value);
-      const adaptiveAlpha = baseAlpha - rotFactor * 0.25; // allow up to 0.25 decrease while rotating
-      const alpha = Math.max(0.5, Math.min(0.99, adaptiveAlpha)); // clamp
+  sampleCount++; let t2=performance.now(); if(t2-srateLastTime>=1000){srate=Math.round(sampleCount*1000/(t2-srateLastTime));sampleCount=0;srateLastTime=t2;}
 
-      gravity.x = alpha * gravity.x + (1 - alpha) * aX;
-      gravity.y = alpha * gravity.y + (1 - alpha) * aY;
-      gravity.z = alpha * gravity.z + (1 - alpha) * aZ;
-
-      ax = aX - gravity.x;
-      ay = aY - gravity.y;
-      az = aZ - gravity.z;
-    } else {
-      // no accelerometer data
-      return;
-    }
-
-    // subtract calibration bias
-    ax -= bias.x || 0;
-    ay -= bias.y || 0;
-    az -= bias.z || 0;
-
-    lastLinearAcc = {x:ax, y:ay, z:az};
-    lastRotRate = e.rotationRate || null;
-
-    // integration
-    let dt = 0;
-    if (lastTs === null) {
-      lastTs = now;
-      dt = 0;
-    } else {
-      dt = (now - lastTs) / 1000; // seconds
-      lastTs = now;
-    }
-    // If dt is reasonable, integrate
-    if (dt > 0 && dt < 0.5) { // ignore huge dt
-      v.x += ax * dt;
-      v.y += ay * dt;
-      v.z += az * dt;
-    }
-
-    // record sample (for chart and calibration)
-    const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-    samples.push({t: now, vx: v.x, vy: v.y, vz: v.z, mag: mag, ax: ax, ay: ay, az: az});
-    // keep only WINDOW_MS + small margin
-    const cutoff = now - WINDOW_MS - 200;
-    while (samples.length && samples[0].t < cutoff) samples.shift();
-
-    // estimate sample rate every second
-    sampleCount++;
-    const nowS = performance.now();
-    if (nowS - srateLastTime >= 1000) {
-      srate = Math.round((sampleCount*1000) / (nowS - srateLastTime));
-      sampleCount = 0;
-      srateLastTime = nowS;
-    }
-
-    // check stationary
-    const linearMag = Math.sqrt(ax*ax + ay*ay + az*az);
-    const isStationary = checkStationary(now, linearMag);
-    if (isStationary && autoZero.checked) {
-      v.x = 0; v.y = 0; v.z = 0;
-      // optionally clear samples to avoid ghost lines
-      samples.push({t: now, vx:0, vy:0, vz:0, mag:0, ax:ax, ay:ay, az:az});
-    }
-
-    // update UI values (numerical)
-    updateUI();
-  }, {passive: true});
-
-  function updateUI(){
-    const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-    vMagEl.textContent = mag.toFixed(3) + ' m/s';
-    vxEl.textContent = v.x.toFixed(4);
-    vyEl.textContent = v.y.toFixed(4);
-    vzEl.textContent = v.z.toFixed(4);
-    lastAccEl.textContent = `${lastLinearAcc.x.toFixed(3)}, ${lastLinearAcc.y.toFixed(3)}, ${lastLinearAcc.z.toFixed(3)}`;
-    lastRotEl.textContent = lastRotRate ? `α:${(lastRotRate.alpha||0).toFixed(1)} β:${(lastRotRate.beta||0).toFixed(1)} γ:${(lastRotRate.gamma||0).toFixed(1)}` : '—';
-    srateEl.textContent = srate ? srate + ' Hz' : '—';
-    // show/hide component stats
-    document.getElementById('vxStat').style.display = showComponents.checked ? 'block' : 'none';
-    document.getElementById('vyStat').style.display = showComponents.checked ? 'block' : 'none';
-    document.getElementById('vzStat').style.display = showComponents.checked ? 'block' : 'none';
+  if(checkStationary(now,Math.sqrt(ax*ax+ay*ay+az*az))&&autoZero.checked){
+    v.x*=DECAY;v.y*=DECAY;v.z*=DECAY;
   }
-
-  // ---- Drawing chart (3s window) ----
-  function drawChart(){
-    resizeCanvas();
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
-    ctx.clearRect(0,0,w,h);
-
-    // background grid
-    ctx.save();
-    ctx.globalAlpha = 0.08;
-    ctx.strokeStyle = '#fff';
-    ctx.beginPath();
-    for (let i=0;i<4;i++){
-      const y = (i+1)/5 * h;
-      ctx.moveTo(0,y); ctx.lineTo(w,y);
-    }
-    ctx.stroke();
-    ctx.restore();
-
-    const now = performance.now();
-    // draw time axis: from now - WINDOW_MS to now
-    const t0 = now - WINDOW_MS;
-    // draw magnitude as primary line
-    ctx.beginPath();
-    let first = true;
-    for (let i=0;i<samples.length;i++){
-      const s = samples[i];
-      const x = ((s.t - t0) / WINDOW_MS) * w;
-      const y = h - Math.min(h, (s.mag * 50)) / 1 * (h * 0.6); // scale: give room (50 m/s unrealistic but safe)
-      // better scale: map mag to [0,h*0.85] using small factor
-      const magScaled = (s.mag) * 20; // tuned for readability
-      const yy = h - Math.min(h*0.85, magScaled) * (h / (h*1.2));
-      if (first) { ctx.moveTo(x, yy); first=false; } else ctx.lineTo(x, yy);
-    }
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#06b6d4';
-    ctx.stroke();
-
-    // draw vx, vy, vz as thin lines offset (optional)
-    ctx.lineWidth = 1;
-    // vx in dashed
-    ctx.setLineDash([4,4]);
-    ctx.beginPath();
-    first = true;
-    for (let i=0;i<samples.length;i++){
-      const s = samples[i];
-      const x = ((s.t - t0) / WINDOW_MS) * w;
-      const val = s.vx; const scaled = val * 15;
-      const yy = h - Math.min(h*0.5, Math.abs(scaled)) - 6 - (val<0?0:0);
-      if (first) { ctx.moveTo(x, yy); first=false; } else ctx.lineTo(x, yy);
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-
-    // current timestamp marker at right
-    ctx.fillStyle = '#06b6d4';
-    ctx.fillRect(w-2, 0, 2, h);
-
-    // overlay text
-    ctx.fillStyle = '#e6eef6';
-    ctx.font = '12px system-ui, Arial';
-    ctx.fillText('Ventana ' + (WINDOW_MS/1000) + 's — |v| (m/s)', 8, 14);
-  }
-
-  // animation loop
-  function rafLoop(){
-    drawChart();
-    requestAnimationFrame(rafLoop);
-  }
-  requestAnimationFrame(rafLoop);
-
-  // initial UI update
   updateUI();
+},{passive:true});
 
-  // ---- Notes / safety ----
-  // - Esta integración es simple y depende del sensor: puede derivar con el tiempo y mostrar drift.
-  // - Para mejorar precisión: sensores nativos (ARKit/ARCore), Kalman filter, y fusión avanzada con giroscopio y magnetómetro.
-  // - El método aquí prioriza baja latencia: integra en cada evento devicemotion usando dt real.
-})();
+function draw(){
+  resize();const r=canvas.getBoundingClientRect(),w=r.width,h=r.height,now=performance.now(),t0=now-WINDOW_MS;
+  ctx.clearRect(0,0,w,h);
+  ctx.beginPath();let first=1;
+  for(const s of samples){
+    const x=((s.t-t0)/WINDOW_MS)*w, y=h-(s.mag*20);
+    if(first){ctx.moveTo(x,y);first=0;} else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle="#06b6d4";ctx.lineWidth=2;ctx.stroke();
+  requestAnimationFrame(draw);
+}
+draw();
 </script>
 </body>
 </html>
