@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detector de Movimiento</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #111;
+    }
+    #circle {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: green;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      transition: background 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="circle"></div>
+
+  <script>
+    const circle = document.getElementById("circle");
+    const THRESHOLD = 1.5; // sensibilidad del movimiento
+    let lastChange = Date.now();
+
+    if (window.DeviceMotionEvent) {
+      window.addEventListener("devicemotion", (event) => {
+        const ax = event.acceleration.x || 0;
+        const ay = event.acceleration.y || 0;
+        const az = event.acceleration.z || 0;
+        const magnitude = Math.sqrt(ax*ax + ay*ay + az*az);
+
+        if (magnitude > THRESHOLD) {
+          circle.style.background = "red"; // en movimiento
+          lastChange = Date.now();
+        } else {
+          // Evita que parpadee: solo vuelve a verde si pasó un ratito sin movimiento
+          if (Date.now() - lastChange > 500) {
+            circle.style.background = "green"; // en reposo
+          }
+        }
+      });
+    } else {
+      alert("Este dispositivo no soporta acelerómetro.");
+    }
+  </script>
+</body>
+</html>
