@@ -288,6 +288,19 @@
             </div>
         </div>
 
+        <div class="control-group">
+            <div class="control-title">
+                <span>Decaimiento del Sonido</span>
+                <span class="control-value" id="sound-decay-value">3.0</span>
+            </div>
+            <div class="slider-container">
+                <input type="range" min="0.5" max="10" step="0.5" value="3.0" class="slider" id="sound-decay">
+            </div>
+            <div style="font-size: 0.8rem; color: #a5b1c2; margin-top: 5px;">
+                (Valores más altos = decaimiento más rápido)
+            </div>
+        </div>
+
         <div class="action-buttons">
             <button class="btn btn-primary" id="toggle-sound">
                 <span class="sound-indicator" id="sound-indicator"></span>
@@ -316,6 +329,7 @@
         let stillThreshold = 0.5; // m/s²
         let stillTimeThreshold = 500; // ms
         let soundThreshold = 2.0; // m/s
+        let soundDecay = 3.0; // Factor de decaimiento del sonido
 
         // Elementos de la UI
         const totalVelocityElement = document.getElementById('total-velocity');
@@ -329,6 +343,8 @@
         const stillTimeValueElement = document.getElementById('still-time-value');
         const soundThresholdElement = document.getElementById('sound-threshold');
         const soundThresholdValueElement = document.getElementById('sound-threshold-value');
+        const soundDecayElement = document.getElementById('sound-decay');
+        const soundDecayValueElement = document.getElementById('sound-decay-value');
         const toggleSoundButton = document.getElementById('toggle-sound');
         const resetVelocityButton = document.getElementById('reset-velocity');
         const soundIndicator = document.getElementById('sound-indicator');
@@ -368,8 +384,8 @@
                     oscillator += 0.1 * Math.sin(2 * Math.PI * 3 * freq * time);
                     oscillator += 0.05 * Math.sin(2 * Math.PI * 4 * freq * time);
                     
-                    // Envolvente de ataque y decaimiento
-                    const envelope = Math.exp(-time * 3) * (1 - Math.exp(-time * 20));
+                    // Envolvente de ataque y decaimiento con factor ajustable
+                    const envelope = Math.exp(-time * soundDecay) * (1 - Math.exp(-time * 20));
                     
                     sample += oscillator * envelope;
                 }
@@ -395,6 +411,9 @@
             if (!soundEnabled || !audioContext || isPlaying) return;
             
             isPlaying = true;
+            
+            // Recrear el buffer con el factor de decaimiento actual
+            createGuitarSound();
             
             const source = audioContext.createBufferSource();
             source.buffer = guitarBuffer;
@@ -546,6 +565,15 @@
             soundThresholdElement.addEventListener('input', function() {
                 soundThreshold = parseFloat(this.value);
                 soundThresholdValueElement.textContent = soundThreshold.toFixed(1) + ' m/s';
+            });
+            
+            soundDecayElement.addEventListener('input', function() {
+                soundDecay = parseFloat(this.value);
+                soundDecayValueElement.textContent = soundDecay.toFixed(1);
+                // Recrear el buffer con el nuevo factor de decaimiento
+                if (audioContext) {
+                    createGuitarSound();
+                }
             });
             
             // Botón para activar/desactivar sonido
