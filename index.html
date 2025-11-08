@@ -80,6 +80,7 @@
         .velocity-component {
             text-align: center;
             width: 30%;
+            min-width: 70px; /* Tamaño fijo para evitar cambios */
         }
 
         .component-label {
@@ -91,6 +92,10 @@
         .component-value {
             font-size: 1.3rem;
             font-weight: 300;
+            min-height: 1.5em; /* Altura fija para evitar cambios */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .controls {
@@ -195,11 +200,11 @@
             border-radius: 50%;
             margin-right: 8px;
             background-color: #e74c3c;
-            animation: pulse 2s infinite;
         }
 
         .sound-on {
             background-color: #2ecc71;
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
@@ -304,8 +309,8 @@
         let stillTimeCounter = 0;
         let soundEnabled = true;
         let audioContext;
-        let oscillator;
-        let gainNode;
+        let guitarBuffer;
+        let isPlaying = false;
 
         // Configuración inicial
         let stillThreshold = 0.5; // m/s²
@@ -331,38 +336,84 @@
         // Inicializar audio
         function initAudio() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            gainNode = audioContext.createGain();
-            gainNode.connect(audioContext.destination);
-            gainNode.gain.value = 0.3; // Volumen reducido para mejor experiencia
+            
+            // Crear un sonido de guitarra acústica A7 sintetizado
+            createGuitarSound();
         }
 
-        // Generar sonido de acorde A7 en guitarra acústica
-        function playSound() {
-            if (!soundEnabled || !audioContext) return;
+        // Crear un sonido de guitarra acústica A7 sintetizado
+        function createGuitarSound() {
+            const duration = 1.5;
+            const sampleRate = audioContext.sampleRate;
+            const frameCount = sampleRate * duration;
+            
+            const buffer = audioContext.createBuffer(2, frameCount, sampleRate);
+            const leftChannel = buffer.getChannelData(0);
+            const rightChannel = buffer.getChannelData(1);
             
             // Frecuencias para el acorde A7 (A, C#, E, G)
             const frequencies = [220.0, 277.18, 329.63, 392.0];
             
-            // Crear osciladores para cada frecuencia
-            frequencies.forEach(freq => {
-                const osc = audioContext.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
+            for (let i = 0; i < frameCount; i++) {
+                const time = i / sampleRate;
                 
-                // Envolvente de ataque y decaimiento rápido para simular guitarra
-                const gainNode = audioContext.createGain();
-                osc.connect(gainNode);
-                gainNode.connect(audioContext.destination);
+                // Generar cada frecuencia del acorde
+                let sample = 0;
+                for (let freq of frequencies) {
+                    // Oscilador principal con forma de onda más compleja
+                    let oscillator = Math.sin(2 * Math.PI * freq * time);
+                    
+                    // Agregar armónicos para simular una guitarra
+                    oscillator += 0.3 * Math.sin(2 * Math.PI * 2 * freq * time);
+                    oscillator += 0.1 * Math.sin(2 * Math.PI * 3 * freq * time);
+                    oscillator += 0.05 * Math.sin(2 * Math.PI * 4 * freq * time);
+                    
+                    // Envolvente de ataque y decaimiento
+                    const envelope = Math.exp(-time * 3) * (1 - Math.exp(-time * 20));
+                    
+                    sample += oscillator * envelope;
+                }
                 
-                // Configurar envolvente
-                const now = audioContext.currentTime;
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01); // Ataque rápido
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5); // Decaimiento
+                // Normalizar y aplicar ruido de cuerda
+                sample = sample / frequencies.length;
                 
-                osc.start(now);
-                osc.stop(now + 0.5);
-            });
+                // Agregar un poco de ruido para simular el sonido de cuerda
+                if (time < 0.05) {
+                    sample += (Math.random() - 0.5) * 0.1 * (1 - time / 0.05);
+                }
+                
+                // Aplicar a ambos canales con ligera diferencia para efecto estéreo
+                leftChannel[i] = sample * 0.6;
+                rightChannel[i] = sample * 0.4;
+            }
+            
+            guitarBuffer = buffer;
+        }
+
+        // Reproducir sonido de guitarra
+        function playSound() {
+            if (!soundEnabled || !audioContext || isPlaying) return;
+            
+            isPlaying = true;
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = guitarBuffer;
+            
+            // Crear un filtro para simular la resonancia de una guitarra acústica
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 2000;
+            
+            // Conectar y reproducir
+            source.connect(filter);
+            filter.connect(audioContext.destination);
+            
+            source.start();
+            
+            // Permitir reproducir de nuevo después de un tiempo
+            setTimeout(() => {
+                isPlaying = false;
+            }, 500);
         }
 
         // Actualizar la UI con los valores actuales
