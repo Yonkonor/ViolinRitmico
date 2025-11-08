@@ -1,524 +1,535 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-<title>Velocidad desde Acelerómetro / Giroscopio — Mobile</title>
-<style>
-  :root{
-    --bg:#0f1724; --card:#111827; --accent:#06b6d4; --muted:#94a3b8; --glass: rgba(255,255,255,0.04);
-  }
-  html,body{height:100%; margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg, #071023 0%, #081226 100%); color:#e6eef6;}
-  .app{max-width:900px; margin:12px auto; padding:12px; box-sizing:border-box;}
-  .header{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
-  .title{font-size:1.05rem; font-weight:600;}
-  .controls{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px;}
-  .card{background:var(--card); padding:10px; border-radius:12px; box-shadow:0 6px 20px rgba(2,6,23,0.6);}
-  label{display:block; font-size:0.78rem; color:var(--muted); margin-bottom:6px;}
-  input[type=range]{width:100%;}
-  .row{display:flex; gap:8px; align-items:center;}
-  .big-readout{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
-  .stat{background:var(--glass); padding:10px; border-radius:8px; min-width:110px; text-align:center;}
-  .stat .num{font-weight:700; font-size:1.05rem;}
-  .stat .sub{font-size:0.72rem; color:var(--muted);}
-  .chart-wrap{margin-top:12px;}
-  canvas{width:100%; height:180px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); border-radius:8px; display:block;}
-  .btns{display:flex; gap:8px; margin-left:auto;}
-  button{background:var(--accent); color:#052024; border:none; padding:8px 10px; border-radius:10px; font-weight:600; cursor:pointer;}
-  .small{font-size:0.82rem; color:var(--muted);}
-  .footer{margin-top:12px; font-size:0.78rem; color:var(--muted);}
-  .grid3{display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin-top:8px;}
-  .input-row{display:flex; gap:8px; align-items:center;}
-  input[type=number]{width:100%; padding:6px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); background:transparent; color:inherit;}
-  @media (max-width:520px){
-    .controls{grid-template-columns:1fr;}
-    .grid3{grid-template-columns:repeat(1,1fr);}
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velocímetro Sonoro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .status-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            width: 48%;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-value {
+            font-size: 1.8rem;
+            font-weight: 300;
+            margin-top: 5px;
+            color: #4cc9f0;
+        }
+
+        .velocity-display {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .velocity-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 300;
+            font-size: 1.2rem;
+        }
+
+        .velocity-components {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .velocity-component {
+            text-align: center;
+            width: 30%;
+        }
+
+        .component-label {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: #a5b1c2;
+        }
+
+        .component-value {
+            font-size: 1.3rem;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-title {
+            margin-bottom: 10px;
+            font-weight: 300;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-value {
+            font-size: 1.1rem;
+            color: #4cc9f0;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4cc9f0;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 300;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4cc9f0;
+            color: #16213e;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e6e6e6;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: auto;
+            padding-top: 20px;
+            font-size: 0.8rem;
+            color: #a5b1c2;
+        }
+
+        .sound-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background-color: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .sound-on {
+            background-color: #2ecc71;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="app">
-  <div class="header">
-    <div class="title">Velocidad desde sensores (Acelerómetro + Giroscopio)</div>
-    <div class="btns">
-      <button id="permBtn">Solicitar permiso</button>
-      <button id="resetBtn">Resetear</button>
-      <button id="soundBtn" style="background:#10b981;">Activar sonido</button>
-    </div>
-  </div>
-
-  <div class="controls">
-    <div class="card">
-      <label>Umbral de quietud (aceleración |m/s²|) — cuando la acc. linear < este valor se considera "quieto"</label>
-      <div class="input-row">
-        <input id="threshold" type="range" min="0.01" max="1.5" step="0.01" value="0.12">
-        <input id="thresholdNum" type="number" min="0.01" max="3" step="0.01" value="0.12">
-      </div>
-      <div class="small">Valor sugerido para un móvil sostenido en la mano ~ 0.08 — 0.2 m/s²</div>
+    <div class="header">
+        <h1>Velocímetro Sonoro</h1>
     </div>
 
-    <div class="card">
-      <label>Tiempo para considerar quietud (ms)</label>
-      <div class="input-row">
-        <input id="holdTime" type="range" min="50" max="1000" step="10" value="200">
-        <input id="holdTimeNum" type="number" min="50" max="2000" step="10" value="200">
-      </div>
-      <div class="small">Duración continuada por debajo del umbral para reiniciar velocidad a 0</div>
-    </div>
-
-    <div class="card">
-      <label>Constante filtro gravedad (alpha) — mayor alpha = gravedad estimada más lenta</label>
-      <div class="input-row">
-        <input id="alpha" type="range" min="0.5" max="0.98" step="0.01" value="0.92">
-        <input id="alphaNum" type="number" min="0.5" max="0.99" step="0.01" value="0.92">
-      </div>
-      <div class="small">Ajusta para mejores resultados según tu dispositivo</div>
-    </div>
-
-    <div class="card">
-      <label>Opciones</label>
-      <div class="row" style="justify-content:space-between;">
-        <div><input id="autoZero" type="checkbox" checked> <span class="small">Auto-zero cuando quietud</span></div>
-        <div><input id="showComponents" type="checkbox" checked> <span class="small">Mostrar componentes X/Y/Z</span></div>
-      </div>
-      <div style="margin-top:8px;"><button id="calibrateBtn">Calibrar (capturar sesgo aceleración)</button></div>
-    </div>
-    
-    <!-- Nueva tarjeta para control de sonido -->
-    <div class="card">
-      <label>Suavizado de sonido (tasa de caída) — mayor = más rápido</label>
-      <div class="input-row">
-        <input id="soundSmoothing" type="range" min="0.01" max="0.5" step="0.01" value="0.2">
-        <input id="soundSmoothingNum" type="number" min="0.01" max="0.5" step="0.01" value="0.2">
-      </div>
-      <div class="small">Controla qué tan rápido el sonido se ajusta a la velocidad (0.01 = muy lento, 0.5 = instantáneo)</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <div>
-        <div class="small">Velocidad (ventana 3s) — magnitud y componentes</div>
-        <div class="big-readout">
-          <div class="stat"><div class="num" id="vMag">0.000 m/s</div><div class="sub">|v|</div></div>
-          <div class="stat" id="vxStat"><div class="num" id="vx">0.000</div><div class="sub">v<sub>x</sub> (m/s)</div></div>
-          <div class="stat" id="vyStat"><div class="num" id="vy">0.000</div><div class="sub">v<sub>y</sub> (m/s)</div></div>
-          <div class="stat" id="vzStat"><div class="num" id="vz">0.000</div><div class="sub">v<sub>z</sub> (m/s)</div></div>
+    <div class="status-container">
+        <div class="status">
+            <div>Velocidad Total</div>
+            <div class="status-value" id="total-velocity">0.00 m/s</div>
         </div>
-      </div>
-      <div style="text-align:right;">
-        <div class="small">Sample rate estimado:</div>
-        <div style="font-weight:700;" id="srate">— Hz</div>
-      </div>
+        <div class="status">
+            <div>Estado</div>
+            <div class="status-value" id="motion-status">En Movimiento</div>
+        </div>
     </div>
 
-    <div class="chart-wrap" style="margin-top:12px;">
-      <canvas id="chart"></canvas>
+    <div class="velocity-display">
+        <div class="velocity-title">Componentes de Velocidad</div>
+        <div class="velocity-components">
+            <div class="velocity-component">
+                <div class="component-label">X</div>
+                <div class="component-value" id="velocity-x">0.00</div>
+            </div>
+            <div class="velocity-component">
+                <div class="component-label">Y</div>
+                <div class="component-value" id="velocity-y">0.00</div>
+            </div>
+            <div class="velocity-component">
+                <div class="component-label">Z</div>
+                <div class="component-value" id="velocity-z">0.00</div>
+            </div>
+        </div>
     </div>
-    <div class="footer">Última aceleración linear: <span id="lastAcc">0,0,0</span> m/s² — RotRate: <span id="lastRot">—</span></div>
-  </div>
-</div>
 
-<script>
-(() => {
-  // ---- Config / estado ----
-  const WINDOW_MS = 3000; // ventana 3s para el gráfico
-  let gravity = {x:0,y:0,z:0}; // estimación de gravedad
-  let bias = {x:0,y:0,z:0}; // sesgo calibrado (opcional)
-  let v = {x:0,y:0,z:0}; // velocidad integrada
-  let lastTs = null;
-  let samples = []; // {t, vx, vy, vz, mag}
-  let lastLinearAcc = {x:0,y:0,z:0};
-  let lastRotRate = null;
-  let sampleCount = 0;
-  let srate = 0, srateLastTime = performance.now();
+    <div class="controls">
+        <div class="control-group">
+            <div class="control-title">
+                <span>Umbral de Quietud</span>
+                <span class="control-value" id="still-threshold-value">0.5 m/s²</span>
+            </div>
+            <div class="slider-container">
+                <input type="range" min="0.1" max="2" step="0.1" value="0.5" class="slider" id="still-threshold">
+            </div>
+        </div>
 
-  // ---- Audio ----
-  let audioContext = null;
-  let oscillator = null;
-  let gainNode = null;
-  let soundEnabled = false;
+        <div class="control-group">
+            <div class="control-title">
+                <span>Tiempo de Quietud</span>
+                <span class="control-value" id="still-time-value">500 ms</span>
+            </div>
+            <div class="slider-container">
+                <input type="range" min="100" max="2000" step="100" value="500" class="slider" id="still-time">
+            </div>
+        </div>
 
-  // UI elements
-  const threshold = document.getElementById('threshold');
-  const thresholdNum = document.getElementById('thresholdNum');
-  const holdTime = document.getElementById('holdTime');
-  const holdTimeNum = document.getElementById('holdTimeNum');
-  const alphaRange = document.getElementById('alpha');
-  const alphaNum = document.getElementById('alphaNum');
-  const permBtn = document.getElementById('permBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const calibrateBtn = document.getElementById('calibrateBtn');
-  const autoZero = document.getElementById('autoZero');
-  const showComponents = document.getElementById('showComponents');
-  const vMagEl = document.getElementById('vMag');
-  const vxEl = document.getElementById('vx');
-  const vyEl = document.getElementById('vy');
-  const vzEl = document.getElementById('vz');
-  const lastAccEl = document.getElementById('lastAcc');
-  const lastRotEl = document.getElementById('lastRot');
-  const srateEl = document.getElementById('srate');
-  const soundBtn = document.getElementById('soundBtn');
-  
-  // Nuevos elementos para control de sonido
-  const soundSmoothing = document.getElementById('soundSmoothing');
-  const soundSmoothingNum = document.getElementById('soundSmoothingNum');
+        <div class="control-group">
+            <div class="control-title">
+                <span>Umbral de Sonido</span>
+                <span class="control-value" id="sound-threshold-value">2.0 m/s</span>
+            </div>
+            <div class="slider-container">
+                <input type="range" min="0.5" max="10" step="0.5" value="2.0" class="slider" id="sound-threshold">
+            </div>
+        </div>
 
-  // canvas
-  const canvas = document.getElementById('chart');
-  const ctx = canvas.getContext('2d');
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="toggle-sound">
+                <span class="sound-indicator" id="sound-indicator"></span>
+                Sonido: ON
+            </button>
+            <button class="btn btn-secondary" id="reset-velocity">Reiniciar Velocidad</button>
+        </div>
+    </div>
 
-  // resize canvas for devicePixelRatio
-  function resizeCanvas(){
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+    <div class="footer">
+        Mueve tu dispositivo para activar el sonido
+    </div>
 
-  // sync numeric inputs
-  threshold.addEventListener('input', ()=> thresholdNum.value = threshold.value);
-  thresholdNum.addEventListener('change', ()=> threshold.value = thresholdNum.value);
-  holdTime.addEventListener('input', ()=> holdTimeNum.value = holdTime.value);
-  holdTimeNum.addEventListener('change', ()=> holdTime.value = holdTimeNum.value);
-  alphaRange.addEventListener('input', ()=> alphaNum.value = alphaRange.value);
-  alphaNum.addEventListener('change', ()=> alphaRange.value = alphaNum.value);
-  
-  // Sincronizar controles de sonido
-  soundSmoothing.addEventListener('input', ()=> soundSmoothingNum.value = soundSmoothing.value);
-  soundSmoothingNum.addEventListener('change', ()=> soundSmoothing.value = soundSmoothingNum.value);
+    <script>
+        // Variables de estado
+        let velocity = { x: 0, y: 0, z: 0 };
+        let lastAcceleration = { x: 0, y: 0, z: 0 };
+        let lastTimestamp = 0;
+        let stillTimeCounter = 0;
+        let soundEnabled = true;
+        let audioContext;
+        let oscillator;
+        let gainNode;
 
-  // ---- Audio functions ----
-  function initAudio() {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      oscillator = audioContext.createOscillator();
-      gainNode = audioContext.createGain();
-      
-      oscillator.type = 'sine';
-      oscillator.frequency.value = 1200; // Cambiado a 1200 Hz
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Start oscillator but with zero gain initially
-      oscillator.start();
-      gainNode.gain.value = 0;
-    }
-  }
+        // Configuración inicial
+        let stillThreshold = 0.5; // m/s²
+        let stillTimeThreshold = 500; // ms
+        let soundThreshold = 2.0; // m/s
 
-  function toggleSound() {
-    if (!soundEnabled) {
-      initAudio();
-      soundEnabled = true;
-      soundBtn.textContent = 'Desactivar sonido';
-      soundBtn.style.background = '#ef4444';
-    } else {
-      soundEnabled = false;
-      soundBtn.textContent = 'Activar sonido';
-      soundBtn.style.background = '#10b981';
-      if (gainNode) {
-        gainNode.gain.value = 0;
-      }
-    }
-  }
+        // Elementos de la UI
+        const totalVelocityElement = document.getElementById('total-velocity');
+        const motionStatusElement = document.getElementById('motion-status');
+        const velocityXElement = document.getElementById('velocity-x');
+        const velocityYElement = document.getElementById('velocity-y');
+        const velocityZElement = document.getElementById('velocity-z');
+        const stillThresholdElement = document.getElementById('still-threshold');
+        const stillThresholdValueElement = document.getElementById('still-threshold-value');
+        const stillTimeElement = document.getElementById('still-time');
+        const stillTimeValueElement = document.getElementById('still-time-value');
+        const soundThresholdElement = document.getElementById('sound-threshold');
+        const soundThresholdValueElement = document.getElementById('sound-threshold-value');
+        const toggleSoundButton = document.getElementById('toggle-sound');
+        const resetVelocityButton = document.getElementById('reset-velocity');
+        const soundIndicator = document.getElementById('sound-indicator');
 
-  function updateSound(magnitude) {
-    if (!soundEnabled || !gainNode) return;
-    
-    // Map magnitude to volume (0-1)
-    // Use logarithmic scale for more natural perception
-    const maxSpeed = 5; // Maximum speed for full volume
-    const volume = Math.min(1, Math.max(0, magnitude / maxSpeed));
-    
-    // Get smoothing factor from the new range input
-    const smoothing = parseFloat(soundSmoothing.value);
-    
-    // Apply smoothing to avoid abrupt changes
-    const currentGain = gainNode.gain.value;
-    const smoothedGain = currentGain * (1 - smoothing) + volume * smoothing;
-    
-    gainNode.gain.value = smoothedGain;
-  }
-
-  soundBtn.addEventListener('click', toggleSound);
-
-  // ---- Stationary detection ----
-  let stationarySince = null;
-  function checkStationary(now, linearMag) {
-    const thr = parseFloat(threshold.value);
-    const hold = parseInt(holdTime.value, 10);
-    if (linearMag <= thr) {
-      if (stationarySince === null) stationarySince = now;
-      else {
-        if ((now - stationarySince) >= hold) {
-          return true;
+        // Inicializar audio
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioContext.createGain();
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.value = 0.3; // Volumen reducido para mejor experiencia
         }
-      }
-    } else {
-      stationarySince = null;
-    }
-    return false;
-  }
 
-  // ---- Calibración simple: captura sesgo estático ----
-  calibrateBtn.addEventListener('click', ()=>{
-    // captura media de aceleraciones recientes (si las hay)
-    if (samples.length === 0) {
-      alert('No hay datos aún. Mueve el teléfono a una posición estable y vuelve a intentar.');
-      return;
-    }
-    // tomar últimas 100 lecturas de aceleración linear (si existen)
-    const N = Math.min(100, samples.length);
-    let sx=0, sy=0, sz=0;
-    for (let i = samples.length - N; i < samples.length; i++){
-      const s = samples[i];
-      sx += s.ax || 0;
-      sy += s.ay || 0;
-      sz += s.az || 0;
-    }
-    bias.x = sx / N;
-    bias.y = sy / N;
-    bias.z = sz / N;
-    alert('Calibración completada. Sesgo guardado.');
-  });
-
-  // ---- Reset ----
-  resetBtn.addEventListener('click', ()=>{
-    v = {x:0,y:0,z:0};
-    samples = [];
-    lastTs = null;
-    gravity = {x:0,y:0,z:0};
-    bias = {x:0,y:0,z:0};
-    stationarySince = null;
-    updateUI();
-  });
-
-  // ---- Permissions for iOS ----
-  permBtn.addEventListener('click', async ()=>{
-    // iOS 13+ requires permission gesture
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      try {
-        const res = await DeviceMotionEvent.requestPermission();
-        if (res === 'granted') {
-          permBtn.textContent = 'Permiso concedido';
-        } else {
-          permBtn.textContent = 'Permiso denegado';
+        // Generar sonido de acorde A7 en guitarra acústica
+        function playSound() {
+            if (!soundEnabled || !audioContext) return;
+            
+            // Frecuencias para el acorde A7 (A, C#, E, G)
+            const frequencies = [220.0, 277.18, 329.63, 392.0];
+            
+            // Crear osciladores para cada frecuencia
+            frequencies.forEach(freq => {
+                const osc = audioContext.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                
+                // Envolvente de ataque y decaimiento rápido para simular guitarra
+                const gainNode = audioContext.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Configurar envolvente
+                const now = audioContext.currentTime;
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01); // Ataque rápido
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5); // Decaimiento
+                
+                osc.start(now);
+                osc.stop(now + 0.5);
+            });
         }
-      } catch (err) {
-        console.error(err);
-        alert('Error solicitando permiso: ' + err);
-      }
-    } else {
-      alert('Tu navegador no requiere permiso explícito (o no lo soporta).');
-    }
-  });
 
-  // ---- DeviceMotion handling ----
-  window.addEventListener('devicemotion', (e) => {
-    const now = performance.now();
-    // prefer event.acceleration (sin gravedad) si disponible
-    // else usar accelerationIncludingGravity y estimar gravedad por low-pass
-    let ax = null, ay = null, az = null;
-    const hasAcc = e.acceleration && (e.acceleration.x !== null);
-    if (hasAcc) {
-      ax = e.acceleration.x;
-      ay = e.acceleration.y;
-      az = e.acceleration.z;
-    } else if (e.accelerationIncludingGravity) {
-      // apply low-pass to estimate gravity
-      const inc = e.accelerationIncludingGravity;
-      const aX = inc.x || 0;
-      const aY = inc.y || 0;
-      const aZ = inc.z || 0;
+        // Actualizar la UI con los valores actuales
+        function updateUI() {
+            const totalVelocity = Math.sqrt(
+                velocity.x * velocity.x + 
+                velocity.y * velocity.y + 
+                velocity.z * velocity.z
+            );
+            
+            totalVelocityElement.textContent = totalVelocity.toFixed(2) + ' m/s';
+            velocityXElement.textContent = velocity.x.toFixed(2);
+            velocityYElement.textContent = velocity.y.toFixed(2);
+            velocityZElement.textContent = velocity.z.toFixed(2);
+            
+            // Cambiar color según la velocidad
+            if (totalVelocity > soundThreshold) {
+                totalVelocityElement.style.color = '#e74c3c';
+            } else {
+                totalVelocityElement.style.color = '#4cc9f0';
+            }
+        }
 
-      // dynamic alpha: if device is rotating, decrease alpha to respond quicker
-      const rot = e.rotationRate;
-      let rotMag = 0;
-      if (rot) {
-        rotMag = Math.abs(rot.alpha || 0) + Math.abs(rot.beta || 0) + Math.abs(rot.gamma || 0);
-      }
-      // map rotMag to a small factor to lower alpha when rotation high
-      const rotFactor = Math.min(1, rotMag / 90); // arbitrary mapping
-      const baseAlpha = parseFloat(alphaRange.value);
-      const adaptiveAlpha = baseAlpha - rotFactor * 0.25; // allow up to 0.25 decrease while rotating
-      const alpha = Math.max(0.5, Math.min(0.99, adaptiveAlpha)); // clamp
+        // Procesar datos del acelerómetro
+        function handleMotionEvent(event) {
+            const acceleration = event.accelerationIncludingGravity;
+            const timestamp = event.timeStamp || Date.now();
+            
+            // Calcular delta de tiempo en segundos
+            const dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+            
+            // Si es la primera lectura, inicializar y salir
+            if (lastAcceleration.x === 0 && lastAcceleration.y === 0 && lastAcceleration.z === 0) {
+                lastAcceleration = { 
+                    x: acceleration.x, 
+                    y: acceleration.y, 
+                    z: acceleration.z 
+                };
+                return;
+            }
+            
+            // Integrar aceleración para obtener velocidad (método trapezoidal para mejor precisión)
+            if (dt > 0 && dt < 0.1) { // Evitar valores extremos de dt
+                velocity.x += (lastAcceleration.x + acceleration.x) / 2 * dt;
+                velocity.y += (lastAcceleration.y + acceleration.y) / 2 * dt;
+                velocity.z += (lastAcceleration.z + acceleration.z) / 2 * dt;
+            }
+            
+            // Actualizar última aceleración
+            lastAcceleration = { 
+                x: acceleration.x, 
+                y: acceleration.y, 
+                z: acceleration.z 
+            };
+            
+            // Detectar si estamos en estado de quietud
+            const accelerationMagnitude = Math.sqrt(
+                acceleration.x * acceleration.x + 
+                acceleration.y * acceleration.y + 
+                acceleration.z * acceleration.z
+            );
+            
+            // Considerar la gravedad (aproximadamente 9.8 m/s²)
+            const movementAcceleration = Math.abs(accelerationMagnitude - 9.8);
+            
+            if (movementAcceleration < stillThreshold) {
+                stillTimeCounter += dt * 1000; // Convertir a ms
+                
+                if (stillTimeCounter >= stillTimeThreshold) {
+                    // Llevar velocidad a cero con suavizado
+                    velocity.x *= 0.9;
+                    velocity.y *= 0.9;
+                    velocity.z *= 0.9;
+                    
+                    // Si la velocidad es muy pequeña, establecer a cero
+                    if (Math.abs(velocity.x) < 0.01) velocity.x = 0;
+                    if (Math.abs(velocity.y) < 0.01) velocity.y = 0;
+                    if (Math.abs(velocity.z) < 0.01) velocity.z = 0;
+                    
+                    motionStatusElement.textContent = 'En Reposo';
+                    motionStatusElement.style.color = '#2ecc71';
+                }
+            } else {
+                stillTimeCounter = 0;
+                motionStatusElement.textContent = 'En Movimiento';
+                motionStatusElement.style.color = '#e74c3c';
+            }
+            
+            // Reproducir sonido si se supera el umbral
+            const currentVelocity = Math.sqrt(
+                velocity.x * velocity.x + 
+                velocity.y * velocity.y + 
+                velocity.z * velocity.z
+            );
+            
+            if (currentVelocity > soundThreshold && soundEnabled) {
+                playSound();
+            }
+            
+            updateUI();
+        }
 
-      gravity.x = alpha * gravity.x + (1 - alpha) * aX;
-      gravity.y = alpha * gravity.y + (1 - alpha) * aY;
-      gravity.z = alpha * gravity.z + (1 - alpha) * aZ;
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Solicitar permiso para el sensor de movimiento
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('devicemotion', handleMotionEvent);
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                window.addEventListener('devicemotion', handleMotionEvent);
+            }
+            
+            // Controladores para los sliders
+            stillThresholdElement.addEventListener('input', function() {
+                stillThreshold = parseFloat(this.value);
+                stillThresholdValueElement.textContent = stillThreshold.toFixed(1) + ' m/s²';
+            });
+            
+            stillTimeElement.addEventListener('input', function() {
+                stillTimeThreshold = parseInt(this.value);
+                stillTimeValueElement.textContent = stillTimeThreshold + ' ms';
+            });
+            
+            soundThresholdElement.addEventListener('input', function() {
+                soundThreshold = parseFloat(this.value);
+                soundThresholdValueElement.textContent = soundThreshold.toFixed(1) + ' m/s';
+            });
+            
+            // Botón para activar/desactivar sonido
+            toggleSoundButton.addEventListener('click', function() {
+                soundEnabled = !soundEnabled;
+                if (soundEnabled) {
+                    this.innerHTML = '<span class="sound-indicator sound-on"></span> Sonido: ON';
+                    soundIndicator.classList.add('sound-on');
+                } else {
+                    this.innerHTML = '<span class="sound-indicator"></span> Sonido: OFF';
+                    soundIndicator.classList.remove('sound-on');
+                }
+            });
+            
+            // Botón para reiniciar velocidad
+            resetVelocityButton.addEventListener('click', function() {
+                velocity = { x: 0, y: 0, z: 0 };
+                lastAcceleration = { x: 0, y: 0, z: 0 };
+                stillTimeCounter = 0;
+                updateUI();
+            });
+        }
 
-      ax = aX - gravity.x;
-      ay = aY - gravity.y;
-      az = aZ - gravity.z;
-    } else {
-      // no accelerometer data
-      return;
-    }
+        // Inicializar la aplicación
+        function initApp() {
+            initAudio();
+            setupEventListeners();
+            updateUI();
+            
+            // Inicializar el último timestamp
+            lastTimestamp = performance.now();
+        }
 
-    // subtract calibration bias
-    ax -= bias.x || 0;
-    ay -= bias.y || 0;
-    az -= bias.z || 0;
-
-    lastLinearAcc = {x:ax, y:ay, z:az};
-    lastRotRate = e.rotationRate || null;
-
-    // integration
-    let dt = 0;
-    if (lastTs === null) {
-      lastTs = now;
-      dt = 0;
-    } else {
-      dt = (now - lastTs) / 1000; // seconds
-      lastTs = now;
-    }
-    // If dt is reasonable, integrate
-    if (dt > 0 && dt < 0.5) { // ignore huge dt
-      v.x += ax * dt;
-      v.y += ay * dt;
-      v.z += az * dt;
-    }
-
-    // record sample (for chart and calibration)
-    const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-    samples.push({t: now, vx: v.x, vy: v.y, vz: v.z, mag: mag, ax: ax, ay: ay, az: az});
-    // keep only WINDOW_MS + small margin
-    const cutoff = now - WINDOW_MS - 200;
-    while (samples.length && samples[0].t < cutoff) samples.shift();
-
-    // estimate sample rate every second
-    sampleCount++;
-    const nowS = performance.now();
-    if (nowS - srateLastTime >= 1000) {
-      srate = Math.round((sampleCount*1000) / (nowS - srateLastTime));
-      sampleCount = 0;
-      srateLastTime = nowS;
-    }
-
-    // check stationary
-    const linearMag = Math.sqrt(ax*ax + ay*ay + az*az);
-    const isStationary = checkStationary(now, linearMag);
-    if (isStationary && autoZero.checked) {
-      // Suave corrección de deriva en lugar de reset abrupto
-      const correctionFactor = 0.95; // Más suave que 0.9
-      v.x *= correctionFactor;
-      v.y *= correctionFactor;
-      v.z *= correctionFactor;
-      
-      // Solo reset a cero si la velocidad es muy baja
-      const speedThreshold = 0.001;
-      if (Math.abs(v.x) < speedThreshold) v.x = 0;
-      if (Math.abs(v.y) < speedThreshold) v.y = 0;
-      if (Math.abs(v.z) < speedThreshold) v.z = 0;
-    }
-
-    // update UI values (numerical)
-    updateUI();
-    
-    // Update audio based on velocity magnitude
-    updateSound(mag);
-  }, {passive: true});
-
-  function updateUI(){
-    const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-    vMagEl.textContent = mag.toFixed(3) + ' m/s';
-    vxEl.textContent = v.x.toFixed(4);
-    vyEl.textContent = v.y.toFixed(4);
-    vzEl.textContent = v.z.toFixed(4);
-    lastAccEl.textContent = `${lastLinearAcc.x.toFixed(3)}, ${lastLinearAcc.y.toFixed(3)}, ${lastLinearAcc.z.toFixed(3)}`;
-    lastRotEl.textContent = lastRotRate ? `α:${(lastRotRate.alpha||0).toFixed(1)} β:${(lastRotRate.beta||0).toFixed(1)} γ:${(lastRotRate.gamma||0).toFixed(1)}` : '—';
-    srateEl.textContent = srate ? srate + ' Hz' : '—';
-    // show/hide component stats
-    document.getElementById('vxStat').style.display = showComponents.checked ? 'block' : 'none';
-    document.getElementById('vyStat').style.display = showComponents.checked ? 'block' : 'none';
-    document.getElementById('vzStat').style.display = showComponents.checked ? 'block' : 'none';
-  }
-
-  // ---- Drawing chart (3s window) ----
-  function drawChart(){
-    resizeCanvas();
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
-    ctx.clearRect(0,0,w,h);
-
-    // background grid
-    ctx.save();
-    ctx.globalAlpha = 0.08;
-    ctx.strokeStyle = '#fff';
-    ctx.beginPath();
-    for (let i=0;i<4;i++){
-      const y = (i+1)/5 * h;
-      ctx.moveTo(0,y); ctx.lineTo(w,y);
-    }
-    ctx.stroke();
-    ctx.restore();
-
-    const now = performance.now();
-    // draw time axis: from now - WINDOW_MS to now
-    const t0 = now - WINDOW_MS;
-    // draw magnitude as primary line
-    ctx.beginPath();
-    let first = true;
-    for (let i=0;i<samples.length;i++){
-      const s = samples[i];
-      const x = ((s.t - t0) / WINDOW_MS) * w;
-      const y = h - Math.min(h, (s.mag * 50)) / 1 * (h * 0.6); // scale: give room (50 m/s unrealistic but safe)
-      // better scale: map mag to [0,h*0.85] using small factor
-      const magScaled = (s.mag) * 20; // tuned for readability
-      const yy = h - Math.min(h*0.85, magScaled) * (h / (h*1.2));
-      if (first) { ctx.moveTo(x, yy); first=false; } else ctx.lineTo(x, yy);
-    }
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#06b6d4';
-    ctx.stroke();
-
-    // draw vx, vy, vz as thin lines offset (optional)
-    ctx.lineWidth = 1;
-    // vx in dashed
-    ctx.setLineDash([4,4]);
-    ctx.beginPath();
-    first = true;
-    for (let i=0;i<samples.length;i++){
-      const s = samples[i];
-      const x = ((s.t - t0) / WINDOW_MS) * w;
-      const val = s.vx; const scaled = val * 15;
-      const yy = h - Math.min(h*0.5, Math.abs(scaled)) - 6 - (val<0?0:0);
-      if (first) { ctx.moveTo(x, yy); first=false; } else ctx.lineTo(x, yy);
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-
-    // current timestamp marker at right
-    ctx.fillStyle = '#06b6d4';
-    ctx.fillRect(w-2, 0, 2, h);
-
-    // overlay text
-    ctx.fillStyle = '#e6eef6';
-    ctx.font = '12px system-ui, Arial';
-    ctx.fillText('Ventana ' + (WINDOW_MS/1000) + 's — |v| (m/s)', 8, 14);
-  }
-
-  // animation loop
-  function rafLoop(){
-    drawChart();
-    requestAnimationFrame(rafLoop);
-  }
-  requestAnimationFrame(rafLoop);
-
-  // initial UI update
-  updateUI();
-
-  // ---- Notes / safety ----
-  // - Esta integración es simple y depende del sensor: puede derivar con el tiempo y mostrar drift.
-  // - Para mejorar precisión: sensores nativos (ARKit/ARCore), Kalman filter, y fusión avanzada con giroscopio y magnetómetro.
-  // - El método aquí prioriza baja latencia: integra en cada evento devicemotion usando dt real.
-})();
-</script>
+        // Iniciar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
