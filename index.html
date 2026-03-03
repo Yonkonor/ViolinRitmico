@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador 3 Notas con Filtro</title>
+    <title>Sintetizador 3 Notas por Giro - Mejorado</title>
     <style>
         body {
             margin: 0;
@@ -33,7 +33,9 @@
         }
         .sensor-row {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-around;
+            gap: 0.5rem;
             margin: 0.5rem 0;
         }
         .sensor-card {
@@ -41,6 +43,7 @@
             border-radius: 10px;
             padding: 0.5rem;
             width: 30%;
+            min-width: 100px;
             box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
         }
         .sensor-label {
@@ -100,7 +103,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas (con compresor)</h1>
+        <h1>🎛️ Sintetizador 3 Notas</h1>
         <div class="sensor-row">
             <div class="sensor-card">
                 <div class="sensor-label">La (XZ)</div>
@@ -108,7 +111,7 @@
                 <div class="volume-indicator">
                     <div id="volGammaFill" class="volume-fill"></div>
                 </div>
-                <div class="note-label">440 Hz</div>
+                <div class="note-label">220 Hz</div>
             </div>
             <div class="sensor-card">
                 <div class="sensor-label">Sol (YZ)</div>
@@ -129,7 +132,7 @@
         </div>
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Incluye compresor para evitar saturación.</div>
+        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Silencio cuando está quieto.</div>
     </div>
 
     <script>
@@ -146,21 +149,34 @@
         // Variables de audio
         let audioContext = null;
         let masterGainNode = null;
-        let compressorNode = null;
-        // Estructura para cada nota
+        let filterNode = null; // Filtro pasa bajos para suavizar
+        
+        // Notas: La (fundamental 220 Hz), Sol (196 Hz), Mi (165 Hz)
+        // Armónicos: 2x y 3x la fundamental
         const notes = {
-            la: { gainNode: null, oscillators: [], frequencies: [440, 880, 1320], gains: [0.4, 0.2, 0.1] }, // Reducidas
-            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.4, 0.2, 0.1] },
-            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.4, 0.2, 0.1] }
+            la: { 
+                gainNode: null, 
+                oscillators: [], 
+                frequencies: [220, 440, 660], // fundamental y dos armónicos
+                gains: [0.5, 0.25, 0.15] 
+            },
+            sol: { 
+                gainNode: null, 
+                oscillators: [], 
+                frequencies: [196, 392, 588], 
+                gains: [0.5, 0.25, 0.15] 
+            },
+            mi: { 
+                gainNode: null, 
+                oscillators: [], 
+                frequencies: [165, 330, 495], 
+                gains: [0.5, 0.25, 0.15] 
+            }
         };
-
-        // Variables para suavizado de ganancia
-        const smoothingFactor = 0.3; // entre 0 y 1 (menor = más suave)
-        let targetGains = { la: 0, sol: 0, mi: 0 };
-        let currentGains = { la: 0, sol: 0, mi: 0 };
 
         let isOn = false;
         const MAX_SPEED = 360; // grados/segundo para volumen máximo
+        const VOLUME_THRESHOLD = 20; // umbral mínimo de velocidad para que suene (evita ruido en reposo)
 
         // Inicializar audio
         async function initAudio() {
@@ -169,26 +185,27 @@
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Crear compresor para evitar saturación
-                compressorNode = audioContext.createDynamicsCompressor();
-                compressorNode.threshold.value = -24; // dB
-                compressorNode.knee.value = 30; // dB
-                compressorNode.ratio.value = 12; // relación
-                compressorNode.attack.value = 0.003; // segundos
-                compressorNode.release.value = 0.25; // segundos
+                // Crear un filtro pasa bajos para suavizar el sonido (corte en 2000 Hz)
+                filterNode = audioContext.createBiquadFilter();
+                filterNode.type = 'lowpass';
+                filterNode.frequency.value = 2000; // Frecuencia de corte
+                filterNode.Q.value = 0.7; // Resonancia suave
                 
+                // Nodo de ganancia master (reducido para evitar saturación)
                 masterGainNode = audioContext.createGain();
-                masterGainNode.gain.value = 0.3; // Reducido para evitar saturación
+                masterGainNode.gain.value = 0.4; // Reducido para evitar clipping
+                
+                // Conectar: filtro -> master -> salida
+                filterNode.connect(masterGainNode);
+                masterGainNode.connect(audioContext.destination);
 
-                // Conectar: masterGain -> compressor -> destination
-                masterGainNode.connect(compressorNode);
-                compressorNode.connect(audioContext.destination);
-
+                // Crear cada nota
                 for (let noteName in notes) {
                     const note = notes[noteName];
                     const gainNode = audioContext.createGain();
                     gainNode.gain.value = 0;
-                    gainNode.connect(masterGainNode);
+                    // Conectar el gain de la nota al filtro (no directamente al master)
+                    gainNode.connect(filterNode);
                     note.gainNode = gainNode;
 
                     for (let i = 0; i < note.frequencies.length; i++) {
@@ -231,13 +248,13 @@
                     note.gainNode = null;
                 }
             }
+            if (filterNode) {
+                filterNode.disconnect();
+                filterNode = null;
+            }
             if (masterGainNode) {
                 masterGainNode.disconnect();
                 masterGainNode = null;
-            }
-            if (compressorNode) {
-                compressorNode.disconnect();
-                compressorNode = null;
             }
             if (audioContext) {
                 audioContext.close();
@@ -267,9 +284,6 @@
                 speedGammaSpan.textContent = '0';
                 speedBetaSpan.textContent = '0';
                 speedAlphaSpan.textContent = '0';
-                // Reiniciar ganancias
-                targetGains = { la: 0, sol: 0, mi: 0 };
-                currentGains = { la: 0, sol: 0, mi: 0 };
             }
         });
 
@@ -288,23 +302,6 @@
             } else {
                 window.addEventListener('devicemotion', handleMotion);
             }
-        }
-
-        // Función de suavizado (se llama en cada evento de sensor)
-        function applySmoothing() {
-            // Aplicar filtro de primer orden a cada ganancia
-            currentGains.la += smoothingFactor * (targetGains.la - currentGains.la);
-            currentGains.sol += smoothingFactor * (targetGains.sol - currentGains.sol);
-            currentGains.mi += smoothingFactor * (targetGains.mi - currentGains.mi);
-
-            if (notes.la.gainNode) notes.la.gainNode.gain.value = currentGains.la;
-            if (notes.sol.gainNode) notes.sol.gainNode.gain.value = currentGains.sol;
-            if (notes.mi.gainNode) notes.mi.gainNode.gain.value = currentGains.mi;
-
-            // Actualizar barras (usamos targetGains para la visualización, para que sea más rápida)
-            volGammaFill.style.width = (targetGains.la * 100) + '%';
-            volBetaFill.style.width = (targetGains.sol * 100) + '%';
-            volAlphaFill.style.width = (targetGains.mi * 100) + '%';
         }
 
         // Manejador de movimiento
@@ -326,13 +323,21 @@
             speedBetaSpan.textContent = Math.round(beta);
             speedAlphaSpan.textContent = Math.round(alpha);
 
-            // Calcular volúmenes objetivo (0-1)
-            targetGains.la = Math.min(gamma / MAX_SPEED, 1.0);
-            targetGains.sol = Math.min(beta / MAX_SPEED, 1.0);
-            targetGains.mi = Math.min(alpha / MAX_SPEED, 1.0);
+            // Aplicar umbral: si la velocidad es menor que VOLUME_THRESHOLD, volumen = 0
+            // Mapeo lineal desde el umbral hasta MAX_SPEED
+            let volGamma = gamma > VOLUME_THRESHOLD ? Math.min((gamma - VOLUME_THRESHOLD) / (MAX_SPEED - VOLUME_THRESHOLD), 1.0) : 0;
+            let volBeta = beta > VOLUME_THRESHOLD ? Math.min((beta - VOLUME_THRESHOLD) / (MAX_SPEED - VOLUME_THRESHOLD), 1.0) : 0;
+            let volAlpha = alpha > VOLUME_THRESHOLD ? Math.min((alpha - VOLUME_THRESHOLD) / (MAX_SPEED - VOLUME_THRESHOLD), 1.0) : 0;
 
-            // Aplicar suavizado
-            applySmoothing();
+            // Actualizar ganancias
+            if (notes.la.gainNode) notes.la.gainNode.gain.value = volGamma;
+            if (notes.sol.gainNode) notes.sol.gainNode.gain.value = volBeta;
+            if (notes.mi.gainNode) notes.mi.gainNode.gain.value = volAlpha;
+
+            // Actualizar barras (mostrar el volumen real, no la velocidad)
+            volGammaFill.style.width = (volGamma * 100) + '%';
+            volBetaFill.style.width = (volBeta * 100) + '%';
+            volAlphaFill.style.width = (volAlpha * 100) + '%';
         }
 
         // Iniciar escucha al cargar la página
@@ -351,7 +356,6 @@
         // Pausar cuando la página no es visible
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && isOn) {
-                // Silenciar suavemente
                 if (notes.la.gainNode) notes.la.gainNode.gain.value = 0;
                 if (notes.sol.gainNode) notes.sol.gainNode.gain.value = 0;
                 if (notes.mi.gainNode) notes.mi.gainNode.gain.value = 0;
