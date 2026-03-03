@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador por Giro</title>
+    <title>Sintetizador 3 Notas por Giro</title>
     <style>
         body {
             margin: 0;
@@ -15,43 +15,59 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            touch-action: none; /* Evita desplazamientos mientras se interactúa */
+            touch-action: none;
         }
         .container {
             text-align: center;
             background: #16213e;
-            padding: 2rem;
+            padding: 1.5rem;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             width: 90%;
             max-width: 400px;
         }
         h1 {
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
             color: #0f3460;
         }
-        .speed-meter {
-            font-size: 2rem;
-            margin: 1rem 0;
-            padding: 1rem;
+        .sensor-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 0.5rem 0;
+        }
+        .sensor-card {
             background: #0f3460;
             border-radius: 10px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            padding: 0.5rem;
+            width: 30%;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        }
+        .sensor-label {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        .sensor-value {
+            font-size: 1.2rem;
+            font-weight: bold;
         }
         .volume-indicator {
             width: 100%;
-            height: 30px;
+            height: 8px;
             background: #53354a;
-            border-radius: 15px;
+            border-radius: 4px;
             overflow: hidden;
-            margin: 1rem 0;
+            margin: 0.5rem 0;
         }
         .volume-fill {
             height: 100%;
             width: 0%;
             background: #e94560;
-            transition: width 0.1s ease;
+            transition: width 0.05s ease;
+        }
+        .note-label {
+            font-size: 0.7rem;
+            margin-top: 0.2rem;
         }
         button {
             background: #e94560;
@@ -76,7 +92,7 @@
             color: #aaa;
         }
         .note {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: #888;
             margin-top: 1rem;
         }
@@ -84,95 +100,122 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Sintetizador por Giro</h1>
-        <div class="speed-meter">
-            <span id="speedValue">0</span> °/s
-        </div>
-        <div class="volume-indicator">
-            <div id="volumeFill" class="volume-fill"></div>
+        <h1>🎛️ Sintetizador 3 Notas</h1>
+        <div class="sensor-row">
+            <div class="sensor-card">
+                <div class="sensor-label">La (XZ)</div>
+                <div class="sensor-value" id="speedGamma">0</div>
+                <div class="volume-indicator">
+                    <div id="volGammaFill" class="volume-fill"></div>
+                </div>
+                <div class="note-label">440 Hz</div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-label">Sol (YZ)</div>
+                <div class="sensor-value" id="speedBeta">0</div>
+                <div class="volume-indicator">
+                    <div id="volBetaFill" class="volume-fill"></div>
+                </div>
+                <div class="note-label">196 Hz</div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-label">Mi (XY)</div>
+                <div class="sensor-value" id="speedAlpha">0</div>
+                <div class="volume-indicator">
+                    <div id="volAlphaFill" class="volume-fill"></div>
+                </div>
+                <div class="note-label">165 Hz</div>
+            </div>
         </div>
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo sobre su eje vertical (como una peonza) para controlar el volumen.</div>
+        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas.</div>
     </div>
 
     <script>
         // Elementos del DOM
-        const speedSpan = document.getElementById('speedValue');
-        const volumeFill = document.getElementById('volumeFill');
+        const speedGammaSpan = document.getElementById('speedGamma');
+        const speedBetaSpan = document.getElementById('speedBeta');
+        const speedAlphaSpan = document.getElementById('speedAlpha');
+        const volGammaFill = document.getElementById('volGammaFill');
+        const volBetaFill = document.getElementById('volBetaFill');
+        const volAlphaFill = document.getElementById('volAlphaFill');
         const powerButton = document.getElementById('powerButton');
         const statusText = document.getElementById('statusText');
 
         // Variables de audio
         let audioContext = null;
-        let gainNode = null;
-        let oscillators = [];
+        let masterGainNode = null;
+        // Estructura para cada nota
+        const notes = {
+            la: { gainNode: null, oscillators: [], frequencies: [440, 880, 1320], gains: [0.5, 0.25, 0.15] },
+            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.5, 0.25, 0.15] },
+            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.5, 0.25, 0.15] }
+        };
+
         let isOn = false;
+        const MAX_SPEED = 360; // grados/segundo para volumen máximo
 
-        // Frecuencias: fundamental 440 Hz, armónicos 880 Hz y 1320 Hz
-        const frequencies = [440, 880, 1320];
-        // Amplitudes relativas (para que no sature)
-        const gains = [0.5, 0.25, 0.15];
-
-        // Configuración del mapeo velocidad -> volumen
-        const MAX_SPEED = 360; // grados/segundo (una vuelta por segundo = volumen máximo)
-        let currentSpeed = 0;
-
-        // Función para inicializar el audio (se llama al encender)
+        // Inicializar audio
         async function initAudio() {
             if (audioContext) return;
 
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGainNode = audioContext.createGain();
+                masterGainNode.gain.value = 0.5; // volumen general
+                masterGainNode.connect(audioContext.destination);
 
-                // Crear nodo de ganancia principal
-                gainNode = audioContext.createGain();
-                gainNode.gain.value = 0; // Comienza en silencio
-                gainNode.connect(audioContext.destination);
+                for (let noteName in notes) {
+                    const note = notes[noteName];
+                    const gainNode = audioContext.createGain();
+                    gainNode.gain.value = 0;
+                    gainNode.connect(masterGainNode);
+                    note.gainNode = gainNode;
 
-                // Crear osciladores para cada frecuencia
-                for (let i = 0; i < frequencies.length; i++) {
-                    const osc = audioContext.createOscillator();
-                    osc.type = 'sine'; // Onda senoidal pura para cada armónico
-                    osc.frequency.value = frequencies[i];
+                    for (let i = 0; i < note.frequencies.length; i++) {
+                        const osc = audioContext.createOscillator();
+                        osc.type = 'sine';
+                        osc.frequency.value = note.frequencies[i];
 
-                    // Crear un nodo de ganancia individual para ajustar el volumen del armónico
-                    const oscGain = audioContext.createGain();
-                    oscGain.gain.value = gains[i];
+                        const oscGain = audioContext.createGain();
+                        oscGain.gain.value = note.gains[i];
 
-                    // Conectar: oscilador -> su ganancia -> ganancia principal
-                    osc.connect(oscGain);
-                    oscGain.connect(gainNode);
-
-                    osc.start();
-                    oscillators.push(osc);
+                        osc.connect(oscGain);
+                        oscGain.connect(gainNode);
+                        osc.start();
+                        note.oscillators.push(osc);
+                    }
                 }
 
-                // Reanudar el contexto si está suspendido (necesario en algunos navegadores)
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
-
             } catch (e) {
                 console.error('Error al inicializar audio:', e);
-                alert('No se pudo inicializar el audio. Asegúrate de usar un navegador compatible.');
+                alert('No se pudo inicializar el audio.');
             }
         }
 
-        // Función para detener el audio
+        // Detener audio
         function stopAudio() {
-            if (oscillators.length > 0) {
-                oscillators.forEach(osc => {
+            for (let noteName in notes) {
+                const note = notes[noteName];
+                note.oscillators.forEach(osc => {
                     try {
                         osc.stop();
                         osc.disconnect();
                     } catch (e) {}
                 });
-                oscillators = [];
+                note.oscillators = [];
+                if (note.gainNode) {
+                    note.gainNode.disconnect();
+                    note.gainNode = null;
+                }
             }
-            if (gainNode) {
-                gainNode.disconnect();
-                gainNode = null;
+            if (masterGainNode) {
+                masterGainNode.disconnect();
+                masterGainNode = null;
             }
             if (audioContext) {
                 audioContext.close();
@@ -180,10 +223,9 @@
             }
         }
 
-        // Manejar el botón de encendido/apagado
+        // Botón encender/apagar
         powerButton.addEventListener('click', async () => {
             if (!isOn) {
-                // Encender
                 await initAudio();
                 if (audioContext) {
                     isOn = true;
@@ -192,22 +234,23 @@
                     statusText.textContent = 'Encendido - Gira el dispositivo';
                 }
             } else {
-                // Apagar
                 stopAudio();
                 isOn = false;
                 powerButton.textContent = '🔊 ENCENDER';
                 powerButton.classList.remove('off');
                 statusText.textContent = 'Apagado';
-                // Resetear visualización de volumen a 0
-                volumeFill.style.width = '0%';
-                gainNode = null; // ya no hay nodo
+                volGammaFill.style.width = '0%';
+                volBetaFill.style.width = '0%';
+                volAlphaFill.style.width = '0%';
+                speedGammaSpan.textContent = '0';
+                speedBetaSpan.textContent = '0';
+                speedAlphaSpan.textContent = '0';
             }
         });
 
-        // Función para solicitar permisos de movimiento (necesario en iOS 13+)
+        // Solicitar permisos de movimiento
         function requestMotionPermission() {
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                // iOS 13+
                 DeviceMotionEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
@@ -218,59 +261,61 @@
                     })
                     .catch(console.error);
             } else {
-                // Android / otros
                 window.addEventListener('devicemotion', handleMotion);
             }
         }
 
-        // Manejador de eventos de movimiento
+        // Manejador de movimiento
         function handleMotion(event) {
-            if (!isOn || !audioContext || !gainNode) return;
+            if (!isOn || !audioContext) return;
 
             const rotation = event.rotationRate;
             if (!rotation) return;
 
-            // Usamos la velocidad de giro alrededor del eje Y (gamma)
-            // gamma: rotación izquierda/derecha (en grados/segundo)
-            let speed = Math.abs(rotation.gamma || 0);
-            // Algunos dispositivos pueden dar valores nulos
-            if (isNaN(speed)) speed = 0;
+            let gamma = Math.abs(rotation.gamma || 0);
+            let beta = Math.abs(rotation.beta || 0);
+            let alpha = Math.abs(rotation.alpha || 0);
 
-            // Actualizar UI
-            currentSpeed = speed;
-            speedSpan.textContent = Math.round(speed);
+            if (isNaN(gamma)) gamma = 0;
+            if (isNaN(beta)) beta = 0;
+            if (isNaN(alpha)) alpha = 0;
 
-            // Mapear velocidad a volumen (0 a 1)
-            let volume = Math.min(speed / MAX_SPEED, 1.0);
-            // Actualizar el nodo de ganancia
-            gainNode.gain.value = volume;
+            speedGammaSpan.textContent = Math.round(gamma);
+            speedBetaSpan.textContent = Math.round(beta);
+            speedAlphaSpan.textContent = Math.round(alpha);
 
-            // Actualizar barra de volumen
-            volumeFill.style.width = (volume * 100) + '%';
+            let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
+            let volBeta = Math.min(beta / MAX_SPEED, 1.0);
+            let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
+
+            if (notes.la.gainNode) notes.la.gainNode.gain.value = volGamma;
+            if (notes.sol.gainNode) notes.sol.gainNode.gain.value = volBeta;
+            if (notes.mi.gainNode) notes.mi.gainNode.gain.value = volAlpha;
+
+            volGammaFill.style.width = (volGamma * 100) + '%';
+            volBetaFill.style.width = (volBeta * 100) + '%';
+            volAlphaFill.style.width = (volAlpha * 100) + '%';
         }
 
-        // Iniciar la escucha de movimiento al cargar la página
-        // Nota: en algunos navegadores se necesita interacción del usuario para recibir eventos,
-        // así que lo atamos al clic del botón también.
+        // Iniciar escucha al cargar la página
         window.addEventListener('load', () => {
-            // Intento automático, pero puede fallar en iOS
             requestMotionPermission();
         });
 
-        // Reintentar si el botón se pulsa y no hay evento aún
+        // Reintentar al pulsar el botón
         powerButton.addEventListener('click', () => {
-            // Si ya hay listener, no duplicar
             if (!window.hasMotionListener) {
                 window.hasMotionListener = true;
                 requestMotionPermission();
             }
         });
 
-        // Opcional: pausar cuando la página no es visible para ahorrar batería
+        // Pausar cuando la página no es visible
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && isOn) {
-                // Silenciar mientras no se ve (opcional)
-                if (gainNode) gainNode.gain.value = 0;
+                if (notes.la.gainNode) notes.la.gainNode.gain.value = 0;
+                if (notes.sol.gainNode) notes.sol.gainNode.gain.value = 0;
+                if (notes.mi.gainNode) notes.mi.gainNode.gain.value = 0;
             }
         });
     </script>
