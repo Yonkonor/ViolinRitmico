@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador 3 Notas por Giro - Mejorado</title>
+    <title>Sintetizador 3 Notas - Suave</title>
     <style>
         body {
             margin: 0;
@@ -33,9 +33,7 @@
         }
         .sensor-row {
             display: flex;
-            flex-wrap: wrap;
             justify-content: space-around;
-            gap: 0.5rem;
             margin: 0.5rem 0;
         }
         .sensor-card {
@@ -43,7 +41,6 @@
             border-radius: 10px;
             padding: 0.5rem;
             width: 30%;
-            min-width: 100px;
             box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
         }
         .sensor-label {
@@ -103,7 +100,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas</h1>
+        <h1>🎛️ Sintetizador 3 Notas - Sin Crujidos</h1>
         <div class="sensor-row">
             <div class="sensor-card">
                 <div class="sensor-label">La (XZ)</div>
@@ -132,7 +129,7 @@
         </div>
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Silencio cuando está quieto.</div>
+        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. El sonido es ahora más suave.</div>
     </div>
 
     <script>
@@ -149,34 +146,18 @@
         // Variables de audio
         let audioContext = null;
         let masterGainNode = null;
-        let filterNode = null; // Filtro pasa bajos para suavizar
-        
-        // Notas: La (fundamental 220 Hz), Sol (196 Hz), Mi (165 Hz)
-        // Armónicos: 2x y 3x la fundamental
+        let filterNode = null; // Filtro paso bajo para suavizar aún más
+
+        // Estructura para cada nota
         const notes = {
-            la: { 
-                gainNode: null, 
-                oscillators: [], 
-                frequencies: [220, 440, 660], // fundamental y dos armónicos
-                gains: [0.5, 0.25, 0.15] 
-            },
-            sol: { 
-                gainNode: null, 
-                oscillators: [], 
-                frequencies: [196, 392, 588], 
-                gains: [0.5, 0.25, 0.15] 
-            },
-            mi: { 
-                gainNode: null, 
-                oscillators: [], 
-                frequencies: [165, 330, 495], 
-                gains: [0.5, 0.25, 0.15] 
-            }
+            la: { gainNode: null, oscillators: [], frequencies: [220, 440, 660], gains: [0.5, 0.25, 0.15] },
+            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.5, 0.25, 0.15] },
+            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.5, 0.25, 0.15] }
         };
 
         let isOn = false;
         const MAX_SPEED = 360; // grados/segundo para volumen máximo
-        const VOLUME_THRESHOLD = 20; // umbral mínimo de velocidad para que suene (evita ruido en reposo)
+        const MIN_VOLUME = 0.02; // Volumen mínimo cuando hay movimiento, pero no cero (evita silencios totales y ruido)
 
         // Inicializar audio
         async function initAudio() {
@@ -185,27 +166,24 @@
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Crear un filtro pasa bajos para suavizar el sonido (corte en 2000 Hz)
+                // Crear filtro paso bajo para eliminar posibles artefactos de alta frecuencia
                 filterNode = audioContext.createBiquadFilter();
                 filterNode.type = 'lowpass';
-                filterNode.frequency.value = 2000; // Frecuencia de corte
-                filterNode.Q.value = 0.7; // Resonancia suave
-                
-                // Nodo de ganancia master (reducido para evitar saturación)
-                masterGainNode = audioContext.createGain();
-                masterGainNode.gain.value = 0.4; // Reducido para evitar clipping
-                
-                // Conectar: filtro -> master -> salida
-                filterNode.connect(masterGainNode);
-                masterGainNode.connect(audioContext.destination);
+                filterNode.frequency.value = 2000; // Frecuencia de corte suave
+                filterNode.Q.value = 0.7; // Resonancia baja
 
-                // Crear cada nota
+                masterGainNode = audioContext.createGain();
+                masterGainNode.gain.value = 0.5; // volumen general
+                
+                // Conectar: masterGain -> filtro -> salida
+                masterGainNode.connect(filterNode);
+                filterNode.connect(audioContext.destination);
+
                 for (let noteName in notes) {
                     const note = notes[noteName];
                     const gainNode = audioContext.createGain();
                     gainNode.gain.value = 0;
-                    // Conectar el gain de la nota al filtro (no directamente al master)
-                    gainNode.connect(filterNode);
+                    gainNode.connect(masterGainNode);
                     note.gainNode = gainNode;
 
                     for (let i = 0; i < note.frequencies.length; i++) {
@@ -248,13 +226,13 @@
                     note.gainNode = null;
                 }
             }
-            if (filterNode) {
-                filterNode.disconnect();
-                filterNode = null;
-            }
             if (masterGainNode) {
                 masterGainNode.disconnect();
                 masterGainNode = null;
+            }
+            if (filterNode) {
+                filterNode.disconnect();
+                filterNode = null;
             }
             if (audioContext) {
                 audioContext.close();
@@ -323,18 +301,46 @@
             speedBetaSpan.textContent = Math.round(beta);
             speedAlphaSpan.textContent = Math.round(alpha);
 
-            // Aplicar umbral: si la velocidad es menor que VOLUME_THRESHOLD, volumen = 0
-            // Mapeo lineal desde el umbral hasta MAX_SPEED
-            let volGamma = gamma > VOLUME_THRESHOLD ? Math.min((gamma - VOLUME_THRESHOLD) / (MAX_SPEED - VOLUME_THRESHOLD), 1.0) : 0;
-            let volBeta = beta > VOLUME_THRESHOLD ? Math.min((beta - VOLUME_THRESHOLD) / (MAX_SPEED - VOLUME_THRESHOLD), 1.0) : 0;
-            let volAlpha = alpha > VOLUME_THRESHOLD ? Math.min((alpha - VOLUME_THRESHOLD) / (MAX_SPEED - VOLUME_THRESHOLD), 1.0) : 0;
+            // Calcular volumen con un mínimo para evitar que baje a cero (evita ruido de fondo)
+            let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
+            let volBeta = Math.min(beta / MAX_SPEED, 1.0);
+            let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
 
-            // Actualizar ganancias
-            if (notes.la.gainNode) notes.la.gainNode.gain.value = volGamma;
-            if (notes.sol.gainNode) notes.sol.gainNode.gain.value = volBeta;
-            if (notes.mi.gainNode) notes.mi.gainNode.gain.value = volAlpha;
+            // Aplicar mínimo solo cuando hay movimiento; si está quieto, queremos silencio total
+            // Pero para evitar crujidos, usamos un umbral: si la velocidad es muy baja, forzamos 0
+            const threshold = 10; // grados/segundo por debajo de este valor, silencio total
+            if (gamma < threshold) volGamma = 0;
+            if (beta < threshold) volBeta = 0;
+            if (alpha < threshold) volAlpha = 0;
 
-            // Actualizar barras (mostrar el volumen real, no la velocidad)
+            // Suavizado exponencial con setTargetAtTime (elimina clics)
+            const now = audioContext.currentTime;
+            const attackTime = 0.05; // 50 ms para subir
+            const releaseTime = 0.1;  // 100 ms para bajar (más lento para evitar cortes)
+
+            if (notes.la.gainNode) {
+                if (volGamma > 0) {
+                    notes.la.gainNode.gain.setTargetAtTime(volGamma, now, attackTime);
+                } else {
+                    notes.la.gainNode.gain.setTargetAtTime(0, now, releaseTime);
+                }
+            }
+            if (notes.sol.gainNode) {
+                if (volBeta > 0) {
+                    notes.sol.gainNode.gain.setTargetAtTime(volBeta, now, attackTime);
+                } else {
+                    notes.sol.gainNode.gain.setTargetAtTime(0, now, releaseTime);
+                }
+            }
+            if (notes.mi.gainNode) {
+                if (volAlpha > 0) {
+                    notes.mi.gainNode.gain.setTargetAtTime(volAlpha, now, attackTime);
+                } else {
+                    notes.mi.gainNode.gain.setTargetAtTime(0, now, releaseTime);
+                }
+            }
+
+            // Actualizar barras visuales (para que la UI sea rápida, no usamos el valor suavizado aquí)
             volGammaFill.style.width = (volGamma * 100) + '%';
             volBetaFill.style.width = (volBeta * 100) + '%';
             volAlphaFill.style.width = (volAlpha * 100) + '%';
@@ -355,10 +361,11 @@
 
         // Pausar cuando la página no es visible
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && isOn) {
-                if (notes.la.gainNode) notes.la.gainNode.gain.value = 0;
-                if (notes.sol.gainNode) notes.sol.gainNode.gain.value = 0;
-                if (notes.mi.gainNode) notes.mi.gainNode.gain.value = 0;
+            if (document.hidden && isOn && audioContext) {
+                const now = audioContext.currentTime;
+                if (notes.la.gainNode) notes.la.gainNode.gain.setTargetAtTime(0, now, 0.1);
+                if (notes.sol.gainNode) notes.sol.gainNode.gain.setTargetAtTime(0, now, 0.1);
+                if (notes.mi.gainNode) notes.mi.gainNode.gain.setTargetAtTime(0, now, 0.1);
             }
         });
     </script>
