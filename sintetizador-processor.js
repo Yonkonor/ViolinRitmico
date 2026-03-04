@@ -1,37 +1,34 @@
 // sintetizador-processor.js
+// Este archivo se ejecuta en el hilo de audio de alta prioridad (AudioWorklet)
+
 class SintetizadorProcessor extends AudioWorkletProcessor {
     constructor() {
         super();
         
-        // Frecuencias fundamentales (La una octava abajo = 220 Hz)
+        // Configuración de las notas (fundamental y armónicos)
         this.notas = {
-            la:  { freq: 220,  ganancia: 0.5 },
-            sol: { freq: 196,  ganancia: 0.5 },
-            mi:  { freq: 165,  ganancia: 0.5 }
+            la:  { freq: 220, ganancia: 0.5 }, // La una octava abajo
+            sol: { freq: 196, ganancia: 0.5 },
+            mi:  { freq: 165, ganancia: 0.5 }
         };
         
-        // Estados de fase para cada nota y cada armónico (fund + 2 armónicos)
+        // Estados de fase para cada oscilador (3 por nota: fundamental, 2º armónico, 3º armónico)
         this.fases = {
             la:  [0, 0, 0],
             sol: [0, 0, 0],
             mi:  [0, 0, 0]
         };
         
-        // Volúmenes actuales (suavizados) - comenzamos en 0
-        this.volumenActual = { la: 0, sol: 0, mi: 0 };
-        // Volúmenes objetivo (recibidos del hilo principal)
-        this.volumenObjetivo = { la: 0, sol: 0, mi: 0 };
+        // Volúmenes actuales (recibidos desde el hilo principal)
+        this.volumenes = { la: 0, sol: 0, mi: 0 };
         
-        // Coeficiente de suavizado (entre 0 y 1). Más alto = más rápido.
-        // Con 0.9, el volumen se acerca al 90% del objetivo en cada bloque de 128 muestras.
-        // A 48kHz, un bloque dura ~2.7ms. 0.9 da un tiempo de establecimiento de unos pocos ms.
-        this.smoothFactor = 0.9;
+        // Para suavizado interno (opcional, podemos usar el setTarget ya implementado)
+        // pero como los mensajes llegan a 60 fps, no es necesario un suavizado extra
         
         // Escuchar mensajes desde el hilo principal
         this.port.onmessage = (event) => {
             if (event.data.tipo === 'volumen') {
-                // Actualizar objetivo
-                this.volumenObjetivo[event.data.nota] = event.data.valor;
+                this.volumenes[event.data.nota] = event.data.valor;
             }
         };
     }
@@ -40,54 +37,55 @@ class SintetizadorProcessor extends AudioWorkletProcessor {
         const output = outputs[0];
         if (!output || output.length === 0) return true;
         
-        const sampleRate = sampleRate; // global en worklet
-        
-        // Suponemos mono: usamos el primer canal
+        // Trabajamos en mono (primer canal)
         const outputChannel = output[0];
-        const numSamples = outputChannel.length;
+        const sampleRate = sampleRate; // variable global en el worklet
         
-        // Para cada muestra en este bloque
-        for (let i = 0; i < numSamples; i++) {
+        // Limpiamos el buffer (opcional, pero por seguridad)
+        for (let i = 0; i < outputChannel.length; i++) {
+            outputChannel[i] = 0;
+        }
+        
+        // Generamos muestra por muestra
+        for (let i = 0; i < outputChannel.length; i++) {
             let muestra = 0;
             
-            // Procesar cada nota
-            for (const [nombre, datos] of Object.entries(this.notas)) {
-                // Aplicar suavizado al volumen de esta nota
-                this.volumenActual[nombre] = this.smoothFactor * this.volumenActual[nombre] 
-                                            + (1 - this.smoothFactor) * this.volumenObjetivo[nombre];
+            // Mezclamos las tres notas
+            for (const [nota, datos] of Object.entries(this.notas)) {
+                const vol = this.volumenes[nota];
+                if (vol <= 0.001) continue; // umbral para ahorrar CPU
                 
-                const vol = this.volumenActual[nombre];
-                if (vol < 0.001) continue; // saltear si es muy bajo
+                const fBase = datos.freq;
+                const gan = datos.ganancia * vol;
                 
-                const freqBase = datos.freq;
-                const gananciaBase = datos.ganancia;
+                // Fundamental (índice 0)
+                muestra += Math.sin(this.fases[nota][0]) * gan * 0.5;
+                // 1er armónico (2*f)
+                muestra += Math.sin(this.fases[nota][1]) * gan * 0.25;
+                // 2do armónico (3*f)
+                muestra += Math.sin(this.fases[nota][2]) * gan * 0.15;
                 
-                // Fundamental (primer armónico)
-                muestra += Math.sin(this.fases[nombre][0]) * vol * gananciaBase * 0.5;
-                // 2º armónico (2x frecuencia)
-                muestra += Math.sin(this.fases[nombre][1]) * vol * gananciaBase * 0.25;
-                // 3er armónico (3x frecuencia)
-                muestra += Math.sin(this.fases[nombre][2]) * vol * gananciaBase * 0.15;
-                
-                // Actualizar fases
+                // Actualizar fases (para la próxima muestra)
                 for (let h = 0; h < 3; h++) {
                     const mult = h + 1; // 1,2,3
-                    this.fases[nombre][h] += 2 * Math.PI * freqBase * mult / sampleRate;
-                    if (this.fases[nombre][h] > 2 * Math.PI) {
-                        this.fases[nombre][h] -= 2 * Math.PI;
+                    this.fases[nota][h] += 2 * Math.PI * fBase * mult / sampleRate;
+                    // Mantener las fases en rango para evitar overflow
+                    if (this.fases[nota][h] > 2 * Math.PI) {
+                        this.fases[nota][h] -= 2 * Math.PI;
                     }
                 }
             }
             
-            // Limitar para evitar saturación (soft clipping suave)
+            // Saturación suave (opcional, para evitar clipping duro)
             if (muestra > 1.0) muestra = 1.0;
             if (muestra < -1.0) muestra = -1.0;
             
             outputChannel[i] = muestra;
         }
         
-        return true; // mantener vivo
+        return true; // Mantener el procesador vivo
     }
 }
 
+// Registrar el procesador con el nombre que usaremos en main.js
 registerProcessor('sintetizador-processor', SintetizadorProcessor);
