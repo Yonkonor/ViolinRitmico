@@ -2,10 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador 3 Notas - Baja Latencia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- Intenta bloquear la orientación landscape (solo sugerencia, no funciona en todos los navegadores) -->
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-orientation" content="portrait">
+    <title>Sintetizador por Giro - Ultra Baja Latencia</title>
     <style>
-        /* Mismos estilos que antes, puedes copiarlos de tu versión anterior */
+        /* Estilos generales */
         body {
             margin: 0;
             padding: 0;
@@ -17,6 +20,7 @@
             align-items: center;
             min-height: 100vh;
             touch-action: none;
+            orientation: portrait; /* Sugerencia para mantener vertical */
         }
         .container {
             text-align: center;
@@ -97,11 +101,24 @@
             color: #888;
             margin-top: 1rem;
         }
+        /* Si el dispositivo está en horizontal, mostramos un mensaje (opcional) */
+        @media (orientation: landscape) {
+            .container::before {
+                content: "⚠️ Gira el teléfono a vertical para mejor experiencia";
+                display: block;
+                background: #e94560;
+                color: white;
+                padding: 0.5rem;
+                border-radius: 10px;
+                margin-bottom: 1rem;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas - Baja Latencia</h1>
+        <h1>🎛️ Sintetizador 3 Notas - Ultra Baja Latencia</h1>
         <div class="sensor-row">
             <div class="sensor-card">
                 <div class="sensor-label">La (XZ)</div>
@@ -130,7 +147,7 @@
         </div>
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Baja latencia con AudioWorklet.</div>
+        <div class="note">Gira el dispositivo en diferentes ejes. Latencia mínima gracias a AudioWorklet.</div>
     </div>
 
     <!-- Cargamos el script principal -->
