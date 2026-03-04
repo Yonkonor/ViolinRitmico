@@ -2,13 +2,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- Intenta bloquear la orientación landscape (solo sugerencia, no funciona en todos los navegadores) -->
-    <meta name="screen-orientation" content="portrait">
-    <meta name="x5-orientation" content="portrait">
-    <title>Sintetizador por Giro - Ultra Baja Latencia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sintetizador 3 Notas - Baja Latencia</title>
     <style>
-        /* Estilos generales */
         body {
             margin: 0;
             padding: 0;
@@ -20,7 +16,6 @@
             align-items: center;
             min-height: 100vh;
             touch-action: none;
-            orientation: portrait; /* Sugerencia para mantener vertical */
         }
         .container {
             text-align: center;
@@ -101,24 +96,11 @@
             color: #888;
             margin-top: 1rem;
         }
-        /* Si el dispositivo está en horizontal, mostramos un mensaje (opcional) */
-        @media (orientation: landscape) {
-            .container::before {
-                content: "⚠️ Gira el teléfono a vertical para mejor experiencia";
-                display: block;
-                background: #e94560;
-                color: white;
-                padding: 0.5rem;
-                border-radius: 10px;
-                margin-bottom: 1rem;
-                font-size: 0.9rem;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas - Ultra Baja Latencia</h1>
+        <h1>🎛️ Sintetizador 3 Notas - Baja Latencia</h1>
         <div class="sensor-row">
             <div class="sensor-card">
                 <div class="sensor-label">La (XZ)</div>
@@ -147,10 +129,276 @@
         </div>
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes. Latencia mínima gracias a AudioWorklet.</div>
+        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Respuesta ultrarrápida.</div>
     </div>
 
-    <!-- Cargamos el script principal -->
-    <script src="main.js"></script>
+    <script>
+        // Elementos del DOM
+        const speedGammaSpan = document.getElementById('speedGamma');
+        const speedBetaSpan = document.getElementById('speedBeta');
+        const speedAlphaSpan = document.getElementById('speedAlpha');
+        const volGammaFill = document.getElementById('volGammaFill');
+        const volBetaFill = document.getElementById('volBetaFill');
+        const volAlphaFill = document.getElementById('volAlphaFill');
+        const powerButton = document.getElementById('powerButton');
+        const statusText = document.getElementById('statusText');
+
+        // Variables de audio
+        let audioContext = null;
+        let masterGainNode = null;
+        let filterNode = null;
+
+        // Estructura para cada nota
+        const notes = {
+            la: { gainNode: null, oscillators: [], frequencies: [220, 440, 660], gains: [0.5, 0.25, 0.15] },
+            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.5, 0.25, 0.15] },
+            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.5, 0.25, 0.15] }
+        };
+
+        let isOn = false;
+        const MAX_SPEED = 360; // grados/segundo para volumen máximo
+        const threshold = 10;   // umbral para silencio total
+
+        // Variables para desacoplar sensor de audio (requestAnimationFrame)
+        let lastGamma = 0, lastBeta = 0, lastAlpha = 0;
+        let rafId = null;
+
+        // Inicializar audio con baja latencia
+        async function initAudio() {
+            if (audioContext) return;
+
+            try {
+                // 1. Crear contexto con hint de baja latencia
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+
+                // 2. Crear nodos (se pueden hacer aunque el contexto esté suspendido)
+                filterNode = audioContext.createBiquadFilter();
+                filterNode.type = 'lowpass';
+                filterNode.frequency.value = 2000;
+                filterNode.Q.value = 0.7;
+
+                masterGainNode = audioContext.createGain();
+                masterGainNode.gain.value = 0.5;
+
+                masterGainNode.connect(filterNode);
+                filterNode.connect(audioContext.destination);
+
+                for (let noteName in notes) {
+                    const note = notes[noteName];
+                    const gainNode = audioContext.createGain();
+                    gainNode.gain.value = 0;
+                    gainNode.connect(masterGainNode);
+                    note.gainNode = gainNode;
+
+                    for (let i = 0; i < note.frequencies.length; i++) {
+                        const osc = audioContext.createOscillator();
+                        osc.type = 'sine';
+                        osc.frequency.value = note.frequencies[i];
+
+                        const oscGain = audioContext.createGain();
+                        oscGain.gain.value = note.gains[i];
+
+                        osc.connect(oscGain);
+                        oscGain.connect(gainNode);
+                        osc.start();
+                        note.oscillators.push(osc);
+                    }
+                }
+
+                // 3. Reanudar inmediatamente (dentro del evento de clic)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+            } catch (e) {
+                console.error('Error al inicializar audio:', e);
+                alert('No se pudo inicializar el audio.');
+            }
+        }
+
+        // Detener audio y limpiar
+        function stopAudio() {
+            // Cancelar bucle RAF
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+
+            for (let noteName in notes) {
+                const note = notes[noteName];
+                note.oscillators.forEach(osc => {
+                    try {
+                        osc.stop();
+                        osc.disconnect();
+                    } catch (e) {}
+                });
+                note.oscillators = [];
+                if (note.gainNode) {
+                    note.gainNode.disconnect();
+                    note.gainNode = null;
+                }
+            }
+            if (masterGainNode) {
+                masterGainNode.disconnect();
+                masterGainNode = null;
+            }
+            if (filterNode) {
+                filterNode.disconnect();
+                filterNode = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+        }
+
+        // Bucle de actualización (requestAnimationFrame)
+        function updateAudioAndUI() {
+            if (!isOn || !audioContext) {
+                // Si está apagado, aseguramos que el bucle se detenga
+                if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                return;
+            }
+
+            const now = audioContext.currentTime;
+            const attackTime = 0.01;  // 10 ms (entre 0.005 y 0.015)
+            const releaseTime = 0.01; // 10 ms
+
+            // Leer los últimos valores del sensor
+            let gamma = lastGamma, beta = lastBeta, alpha = lastAlpha;
+
+            // Actualizar UI numérica
+            speedGammaSpan.textContent = Math.round(gamma);
+            speedBetaSpan.textContent = Math.round(beta);
+            speedAlphaSpan.textContent = Math.round(alpha);
+
+            // Calcular volumen (0-1)
+            let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
+            let volBeta = Math.min(beta / MAX_SPEED, 1.0);
+            let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
+
+            // Aplicar umbral de silencio
+            if (gamma < threshold) volGamma = 0;
+            if (beta < threshold) volBeta = 0;
+            if (alpha < threshold) volAlpha = 0;
+
+            // Aplicar cambios de ganancia con suavizado exponencial (ataque/liberación rápidos)
+            if (notes.la.gainNode) {
+                notes.la.gainNode.gain.setTargetAtTime(volGamma, now, volGamma > 0 ? attackTime : releaseTime);
+            }
+            if (notes.sol.gainNode) {
+                notes.sol.gainNode.gain.setTargetAtTime(volBeta, now, volBeta > 0 ? attackTime : releaseTime);
+            }
+            if (notes.mi.gainNode) {
+                notes.mi.gainNode.gain.setTargetAtTime(volAlpha, now, volAlpha > 0 ? attackTime : releaseTime);
+            }
+
+            // Actualizar barras visuales (con el mismo valor para consistencia)
+            volGammaFill.style.width = (volGamma * 100) + '%';
+            volBetaFill.style.width = (volBeta * 100) + '%';
+            volAlphaFill.style.width = (volAlpha * 100) + '%';
+
+            // Próximo frame
+            rafId = requestAnimationFrame(updateAudioAndUI);
+        }
+
+        // Manejador de movimiento (solo actualiza variables)
+        function handleMotion(event) {
+            if (!isOn) return; // Solo leer si el sintetizador está encendido (ahorra CPU)
+
+            const rotation = event.rotationRate;
+            if (!rotation) return;
+
+            // Actualizar valores (si no existen, se usa 0)
+            lastGamma = Math.abs(rotation.gamma || 0);
+            lastBeta = Math.abs(rotation.beta || 0);
+            lastAlpha = Math.abs(rotation.alpha || 0);
+        }
+
+        // Solicitar permisos de movimiento (iOS)
+        function requestMotionPermission() {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('devicemotion', handleMotion);
+                        } else {
+                            alert('Permiso denegado para usar el giroscopio.');
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                window.addEventListener('devicemotion', handleMotion);
+            }
+        }
+
+        // Botón encender/apagar
+        powerButton.addEventListener('click', async () => {
+            if (!isOn) {
+                await initAudio();
+                if (audioContext) {
+                    isOn = true;
+                    powerButton.textContent = '🔇 APAGAR';
+                    powerButton.classList.add('off');
+                    statusText.textContent = 'Encendido - Gira el dispositivo';
+
+                    // Iniciar bucle de actualización si no está corriendo
+                    if (!rafId) {
+                        rafId = requestAnimationFrame(updateAudioAndUI);
+                    }
+                }
+            } else {
+                stopAudio();
+                isOn = false;
+                powerButton.textContent = '🔊 ENCENDER';
+                powerButton.classList.remove('off');
+                statusText.textContent = 'Apagado';
+                // Las barras se limpian en stopAudio (opcional, pero lo hacemos aquí también)
+                volGammaFill.style.width = '0%';
+                volBetaFill.style.width = '0%';
+                volAlphaFill.style.width = '0%';
+                speedGammaSpan.textContent = '0';
+                speedBetaSpan.textContent = '0';
+                speedAlphaSpan.textContent = '0';
+            }
+        });
+
+        // Iniciar escucha al cargar la página
+        window.addEventListener('load', () => {
+            requestMotionPermission();
+        });
+
+        // Reintentar permisos al pulsar el botón (por si acaso)
+        powerButton.addEventListener('click', () => {
+            if (!window.hasMotionListener) {
+                window.hasMotionListener = true;
+                requestMotionPermission();
+            }
+        });
+
+        // Pausar cuando la página no es visible (ahorra batería)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Cancelar bucle y silenciar audio
+                if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                if (isOn && audioContext) {
+                    const now = audioContext.currentTime;
+                    if (notes.la.gainNode) notes.la.gainNode.gain.setTargetAtTime(0, now, 0.01);
+                    if (notes.sol.gainNode) notes.sol.gainNode.gain.setTargetAtTime(0, now, 0.01);
+                    if (notes.mi.gainNode) notes.mi.gainNode.gain.setTargetAtTime(0, now, 0.01);
+                }
+            } else {
+                // Al volver a la página, reiniciar bucle si está encendido
+                if (isOn && audioContext && !rafId) {
+                    rafId = requestAnimationFrame(updateAudioAndUI);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
