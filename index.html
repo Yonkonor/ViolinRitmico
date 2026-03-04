@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador 3 Notas - Suave</title>
+    <title>Sintetizador 3 Notas - Baja Latencia</title>
     <style>
+        /* Mismos estilos que antes, puedes copiarlos de tu versión anterior */
         body {
             margin: 0;
             padding: 0;
@@ -100,7 +101,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas - Sin Crujidos</h1>
+        <h1>🎛️ Sintetizador 3 Notas - Baja Latencia</h1>
         <div class="sensor-row">
             <div class="sensor-card">
                 <div class="sensor-label">La (XZ)</div>
@@ -129,245 +130,10 @@
         </div>
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. El sonido es ahora más suave.</div>
+        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Baja latencia con AudioWorklet.</div>
     </div>
 
-    <script>
-        // Elementos del DOM
-        const speedGammaSpan = document.getElementById('speedGamma');
-        const speedBetaSpan = document.getElementById('speedBeta');
-        const speedAlphaSpan = document.getElementById('speedAlpha');
-        const volGammaFill = document.getElementById('volGammaFill');
-        const volBetaFill = document.getElementById('volBetaFill');
-        const volAlphaFill = document.getElementById('volAlphaFill');
-        const powerButton = document.getElementById('powerButton');
-        const statusText = document.getElementById('statusText');
-
-        // Variables de audio
-        let audioContext = null;
-        let masterGainNode = null;
-        let filterNode = null; // Filtro paso bajo para suavizar aún más
-
-        // Estructura para cada nota
-        const notes = {
-            la: { gainNode: null, oscillators: [], frequencies: [220, 440, 660], gains: [0.5, 0.25, 0.15] },
-            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.5, 0.25, 0.15] },
-            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.5, 0.25, 0.15] }
-        };
-
-        let isOn = false;
-        const MAX_SPEED = 360; // grados/segundo para volumen máximo
-        const MIN_VOLUME = 0.02; // Volumen mínimo cuando hay movimiento, pero no cero (evita silencios totales y ruido)
-
-        // Inicializar audio
-        async function initAudio() {
-            if (audioContext) return;
-
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // Crear filtro paso bajo para eliminar posibles artefactos de alta frecuencia
-                filterNode = audioContext.createBiquadFilter();
-                filterNode.type = 'lowpass';
-                filterNode.frequency.value = 2000; // Frecuencia de corte suave
-                filterNode.Q.value = 0.7; // Resonancia baja
-
-                masterGainNode = audioContext.createGain();
-                masterGainNode.gain.value = 0.5; // volumen general
-                
-                // Conectar: masterGain -> filtro -> salida
-                masterGainNode.connect(filterNode);
-                filterNode.connect(audioContext.destination);
-
-                for (let noteName in notes) {
-                    const note = notes[noteName];
-                    const gainNode = audioContext.createGain();
-                    gainNode.gain.value = 0;
-                    gainNode.connect(masterGainNode);
-                    note.gainNode = gainNode;
-
-                    for (let i = 0; i < note.frequencies.length; i++) {
-                        const osc = audioContext.createOscillator();
-                        osc.type = 'sine';
-                        osc.frequency.value = note.frequencies[i];
-
-                        const oscGain = audioContext.createGain();
-                        oscGain.gain.value = note.gains[i];
-
-                        osc.connect(oscGain);
-                        oscGain.connect(gainNode);
-                        osc.start();
-                        note.oscillators.push(osc);
-                    }
-                }
-
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
-                }
-            } catch (e) {
-                console.error('Error al inicializar audio:', e);
-                alert('No se pudo inicializar el audio.');
-            }
-        }
-
-        // Detener audio
-        function stopAudio() {
-            for (let noteName in notes) {
-                const note = notes[noteName];
-                note.oscillators.forEach(osc => {
-                    try {
-                        osc.stop();
-                        osc.disconnect();
-                    } catch (e) {}
-                });
-                note.oscillators = [];
-                if (note.gainNode) {
-                    note.gainNode.disconnect();
-                    note.gainNode = null;
-                }
-            }
-            if (masterGainNode) {
-                masterGainNode.disconnect();
-                masterGainNode = null;
-            }
-            if (filterNode) {
-                filterNode.disconnect();
-                filterNode = null;
-            }
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-        }
-
-        // Botón encender/apagar
-        powerButton.addEventListener('click', async () => {
-            if (!isOn) {
-                await initAudio();
-                if (audioContext) {
-                    isOn = true;
-                    powerButton.textContent = '🔇 APAGAR';
-                    powerButton.classList.add('off');
-                    statusText.textContent = 'Encendido - Gira el dispositivo';
-                }
-            } else {
-                stopAudio();
-                isOn = false;
-                powerButton.textContent = '🔊 ENCENDER';
-                powerButton.classList.remove('off');
-                statusText.textContent = 'Apagado';
-                volGammaFill.style.width = '0%';
-                volBetaFill.style.width = '0%';
-                volAlphaFill.style.width = '0%';
-                speedGammaSpan.textContent = '0';
-                speedBetaSpan.textContent = '0';
-                speedAlphaSpan.textContent = '0';
-            }
-        });
-
-        // Solicitar permisos de movimiento
-        function requestMotionPermission() {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                DeviceMotionEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('devicemotion', handleMotion);
-                        } else {
-                            alert('Permiso denegado para usar el giroscopio.');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                window.addEventListener('devicemotion', handleMotion);
-            }
-        }
-
-        // Manejador de movimiento
-        function handleMotion(event) {
-            if (!isOn || !audioContext) return;
-
-            const rotation = event.rotationRate;
-            if (!rotation) return;
-
-            let gamma = Math.abs(rotation.gamma || 0);
-            let beta = Math.abs(rotation.beta || 0);
-            let alpha = Math.abs(rotation.alpha || 0);
-
-            if (isNaN(gamma)) gamma = 0;
-            if (isNaN(beta)) beta = 0;
-            if (isNaN(alpha)) alpha = 0;
-
-            speedGammaSpan.textContent = Math.round(gamma);
-            speedBetaSpan.textContent = Math.round(beta);
-            speedAlphaSpan.textContent = Math.round(alpha);
-
-            // Calcular volumen con un mínimo para evitar que baje a cero (evita ruido de fondo)
-            let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
-            let volBeta = Math.min(beta / MAX_SPEED, 1.0);
-            let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
-
-            // Aplicar mínimo solo cuando hay movimiento; si está quieto, queremos silencio total
-            // Pero para evitar crujidos, usamos un umbral: si la velocidad es muy baja, forzamos 0
-            const threshold = 10; // grados/segundo por debajo de este valor, silencio total
-            if (gamma < threshold) volGamma = 0;
-            if (beta < threshold) volBeta = 0;
-            if (alpha < threshold) volAlpha = 0;
-
-            // Suavizado exponencial con setTargetAtTime (elimina clics)
-            const now = audioContext.currentTime;
-            const attackTime = 0.05; // 50 ms para subir
-            const releaseTime = 0.1;  // 100 ms para bajar (más lento para evitar cortes)
-
-            if (notes.la.gainNode) {
-                if (volGamma > 0) {
-                    notes.la.gainNode.gain.setTargetAtTime(volGamma, now, attackTime);
-                } else {
-                    notes.la.gainNode.gain.setTargetAtTime(0, now, releaseTime);
-                }
-            }
-            if (notes.sol.gainNode) {
-                if (volBeta > 0) {
-                    notes.sol.gainNode.gain.setTargetAtTime(volBeta, now, attackTime);
-                } else {
-                    notes.sol.gainNode.gain.setTargetAtTime(0, now, releaseTime);
-                }
-            }
-            if (notes.mi.gainNode) {
-                if (volAlpha > 0) {
-                    notes.mi.gainNode.gain.setTargetAtTime(volAlpha, now, attackTime);
-                } else {
-                    notes.mi.gainNode.gain.setTargetAtTime(0, now, releaseTime);
-                }
-            }
-
-            // Actualizar barras visuales (para que la UI sea rápida, no usamos el valor suavizado aquí)
-            volGammaFill.style.width = (volGamma * 100) + '%';
-            volBetaFill.style.width = (volBeta * 100) + '%';
-            volAlphaFill.style.width = (volAlpha * 100) + '%';
-        }
-
-        // Iniciar escucha al cargar la página
-        window.addEventListener('load', () => {
-            requestMotionPermission();
-        });
-
-        // Reintentar al pulsar el botón
-        powerButton.addEventListener('click', () => {
-            if (!window.hasMotionListener) {
-                window.hasMotionListener = true;
-                requestMotionPermission();
-            }
-        });
-
-        // Pausar cuando la página no es visible
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && isOn && audioContext) {
-                const now = audioContext.currentTime;
-                if (notes.la.gainNode) notes.la.gainNode.gain.setTargetAtTime(0, now, 0.1);
-                if (notes.sol.gainNode) notes.sol.gainNode.gain.setTargetAtTime(0, now, 0.1);
-                if (notes.mi.gainNode) notes.mi.gainNode.gain.setTargetAtTime(0, now, 0.1);
-            }
-        });
-    </script>
+    <!-- Cargamos el script principal -->
+    <script src="main.js"></script>
 </body>
 </html>
