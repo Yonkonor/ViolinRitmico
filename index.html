@@ -2,403 +2,426 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador 3 Notas - Baja Latencia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sintetizador por Giro · Acordes 7 (baja latencia)</title>
     <style>
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            background: #1a1a2e;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            margin: 0; min-height: 100vh; background: #1a1e2c;
+            display: flex; justify-content: center; align-items: center;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
             touch-action: none;
         }
-        .container {
-            text-align: center;
-            background: #16213e;
-            padding: 1.5rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            width: 90%;
-            max-width: 400px;
+        .app { width: 100%; max-width: 400px; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .canvas-container { background: #2d3349; border-radius: 32px; padding: 16px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.5); }
+        canvas { display: block; width: 100%; height: auto;
+            border-radius: 24px; background: #0b0e14; touch-action: none; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        .chord-label {
+            color: #e0e5f0; font-size: 2.2rem; font-weight: 600; letter-spacing: 4px;
+            text-shadow: 0 2px 5px #00000060; background: #252b3d;
+            padding: 8px 30px; border-radius: 60px; width: fit-content; margin: 5px 0;
         }
-        h1 {
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
-            color: #0f3460;
+        .power-btn {
+            background: #3a415a; border: none; border-radius: 80px;
+            padding: 16px 48px; color: white; font-size: 1.8rem; font-weight: bold;
+            letter-spacing: 2px; box-shadow: 0 8px 0 #1e212c, 0 10px 20px black;
+            transition: all 0.08s ease; text-transform: uppercase;
+            touch-action: manipulation; width: fit-content;
         }
-        .sensor-row {
-            display: flex;
-            justify-content: space-around;
-            margin: 0.5rem 0;
+        .power-btn.on {
+            background: #4c6b4f; box-shadow: 0 4px 0 #2a3a2c, 0 10px 20px black;
+            transform: translateY(4px);
         }
-        .sensor-card {
-            background: #0f3460;
-            border-radius: 10px;
-            padding: 0.5rem;
-            width: 30%;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        .info {
+            color: #a4b0cd; font-size: 0.85rem; text-align: center;
+            background: #252b3d80; padding: 10px 20px; border-radius: 40px;
+            backdrop-filter: blur(2px); line-height: 1.5;
         }
-        .sensor-label {
-            font-size: 0.8rem;
-            color: #aaa;
-        }
-        .sensor-value {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        .volume-indicator {
-            width: 100%;
-            height: 8px;
-            background: #53354a;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 0.5rem 0;
-        }
-        .volume-fill {
-            height: 100%;
-            width: 0%;
-            background: #e94560;
-            transition: width 0.05s ease;
-        }
-        .note-label {
-            font-size: 0.7rem;
-            margin-top: 0.2rem;
-        }
-        button {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            font-size: 1.5rem;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 1rem 0;
-            width: 100%;
-            transition: transform 0.2s;
-        }
-        button:active {
-            transform: scale(0.95);
-        }
-        button.off {
-            background: #4a4a4a;
-        }
-        .status {
-            font-size: 1rem;
-            color: #aaa;
-        }
-        .note {
-            font-size: 0.7rem;
-            color: #888;
-            margin-top: 1rem;
+        .latency {
+            color: #7fd1a0; font-size: 0.75rem; font-family: monospace;
+            background: #1a2a20; padding: 4px 12px; border-radius: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas - Baja Latencia</h1>
-        <div class="sensor-row">
-            <div class="sensor-card">
-                <div class="sensor-label">La (XZ)</div>
-                <div class="sensor-value" id="speedGamma">0</div>
-                <div class="volume-indicator">
-                    <div id="volGammaFill" class="volume-fill"></div>
-                </div>
-                <div class="note-label">220 Hz</div>
-            </div>
-            <div class="sensor-card">
-                <div class="sensor-label">Sol (YZ)</div>
-                <div class="sensor-value" id="speedBeta">0</div>
-                <div class="volume-indicator">
-                    <div id="volBetaFill" class="volume-fill"></div>
-                </div>
-                <div class="note-label">196 Hz</div>
-            </div>
-            <div class="sensor-card">
-                <div class="sensor-label">Mi (XY)</div>
-                <div class="sensor-value" id="speedAlpha">0</div>
-                <div class="volume-indicator">
-                    <div id="volAlphaFill" class="volume-fill"></div>
-                </div>
-                <div class="note-label">165 Hz</div>
-            </div>
+    <div class="app">
+        <div class="canvas-container">
+            <canvas id="sliderCanvas" width="300" height="300"></canvas>
         </div>
-        <button id="powerButton">🔊 ENCENDER</button>
-        <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Respuesta ultrarrápida.</div>
+        <div class="chord-label" id="chordDisplay">A7</div>
+        <button class="power-btn" id="powerBtn">OFF</button>
+        <div class="info">
+            Gira el teléfono en los ejes XZ, YZ, XY<br>
+            Umbral mínimo evita sonido en reposo
+        </div>
+        <div class="latency" id="latencyInfo">latencia: --</div>
     </div>
-
     <script>
-        // Elementos del DOM
-        const speedGammaSpan = document.getElementById('speedGamma');
-        const speedBetaSpan = document.getElementById('speedBeta');
-        const speedAlphaSpan = document.getElementById('speedAlpha');
-        const volGammaFill = document.getElementById('volGammaFill');
-        const volBetaFill = document.getElementById('volBetaFill');
-        const volAlphaFill = document.getElementById('volAlphaFill');
-        const powerButton = document.getElementById('powerButton');
-        const statusText = document.getElementById('statusText');
+    (function(){
+        // ========== CONFIGURACIÓN ==========
+        const MAX_ROTATION_SPEED    = 5.0;    // rad/s → gain 1
+        const MIN_SPEED_THRESHOLD   = 0.2;    // umbral para silenciar
+        const VOLUME_RAMP_TIME      = 0.020;  // 20 ms → antes 50 ms (τ)
+        const FREQ_RAMP_TIME        = 0.010;  // 10 ms al cambiar acorde
+        const MASTER_RAMP_TIME      = 0.015;  // 15 ms al encender
 
-        // Variables de audio
-        let audioContext = null;
-        let masterGainNode = null;
-        let filterNode = null;
-
-        // Estructura para cada nota
-        const notes = {
-            la: { gainNode: null, oscillators: [], frequencies: [220, 440, 660], gains: [0.5, 0.25, 0.15] },
-            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.5, 0.25, 0.15] },
-            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.5, 0.25, 0.15] }
+        const CHORDS = {
+            'A7': [220.00, 277.18, 392.00],   // A3, C#4, G4
+            'D7': [293.66, 369.99, 523.25],   // D4, F#4, C5
+            'E7': [329.63, 415.30, 587.33]    // E4, G#4, D5
         };
 
-        let isOn = false;
-        const MAX_SPEED = 360; // grados/segundo para volumen máximo
-        const threshold = 10;   // umbral para silencio total
+        // ========== ESTADO ==========
+        let audioContext   = null;
+        let masterGain     = null;
+        let notes          = [];
+        let currentChord   = 'A7';
+        let rotX = 0, rotY = 0, rotZ = 0;
+        let powerOn        = false;
+        let prewarmed      = false;      // ← nuevo: pre-calentado del contexto
+        let motionListenerActive = false;
 
-        // Variables para desacoplar sensor de audio (requestAnimationFrame)
-        let lastGamma = 0, lastBeta = 0, lastAlpha = 0;
-        let rafId = null;
+        const canvas        = document.getElementById('sliderCanvas');
+        const ctx2d         = canvas.getContext('2d');
+        const chordDisplay  = document.getElementById('chordDisplay');
+        const powerBtn      = document.getElementById('powerBtn');
+        const latencyInfo   = document.getElementById('latencyInfo');
 
-        // Inicializar audio con baja latencia
-        async function initAudio() {
+        // ========== CURVA BEZIER ==========
+        const P0 = { x: 150, y: 150 };
+        const P2 = { x: 300, y: 0 };
+        const P1 = { x: 300, y: 150 };
+
+        let handleT = 0.0;
+        const handleRadius = 18;
+
+        // ========== HELPERS DE AUDIO (cancelAndHoldAtTime con fallback) ==========
+        function holdParam(param, when) {
+            if (typeof param.cancelAndHoldAtTime === 'function') {
+                param.cancelAndHoldAtTime(when);
+            } else {
+                param.cancelScheduledValues(when);
+                param.setValueAtTime(param.value, when);
+            }
+        }
+
+        // ========== CLASE NOTE ==========
+        class NoteOscillators {
+            constructor(context, baseFreq, harmonicGains = [0.7, 0.4, 0.2]) {
+                this.context = context;
+                this.baseFreq = baseFreq;
+                this.outputGain = context.createGain();
+                this.outputGain.gain.value = 0;
+                this.oscillators = [];
+                this.harmonicGains = harmonicGains;
+
+                for (let i = 0; i < 3; i++) {
+                    const osc  = context.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.value = baseFreq * (i + 1);
+
+                    const g = context.createGain();
+                    g.gain.value = harmonicGains[i];
+
+                    osc.connect(g);
+                    g.connect(this.outputGain);
+                    osc.start();
+                    this.oscillators.push(osc);
+                }
+            }
+
+            // 🟠 cancelAndHold + linearRamp → sin cola asintótica, sin clicks
+            setBaseFrequency(newBase) {
+                this.baseFreq = newBase;
+                const now = this.context.currentTime;
+                for (let i = 0; i < 3; i++) {
+                    const targetFreq = newBase * (i + 1);
+                    const f = this.oscillators[i].frequency;
+                    holdParam(f, now);
+                    f.linearRampToValueAtTime(targetFreq, now + FREQ_RAMP_TIME);
+                }
+            }
+
+            // 🟠/🟡 linearRamp de 20 ms con cancelAndHold → respuesta determinista
+            setVolume(vol) {
+                const now = this.context.currentTime;
+                const p = this.outputGain.gain;
+                holdParam(p, now);
+                p.linearRampToValueAtTime(vol, now + VOLUME_RAMP_TIME);
+            }
+
+            connect(dest) { this.outputGain.connect(dest); }
+        }
+
+        // ========== CREACIÓN DEL GRAFO (síncrona, idempotente) ==========
+        function createAudioGraph() {
             if (audioContext) return;
 
+            // 🟡 SIN sampleRate: deja que el SO elija el nativo (evita re-muestreo)
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                latencyHint: 'interactive'
+            });
+
+            masterGain = audioContext.createGain();
+            masterGain.gain.value = 0;
+            masterGain.connect(audioContext.destination);
+
+            const freqs = CHORDS[currentChord];
+            const harm  = [0.7, 0.4, 0.2];
+            for (let i = 0; i < 3; i++) {
+                const note = new NoteOscillators(audioContext, freqs[i], harm);
+                note.connect(masterGain);
+                notes.push(note);
+            }
+
+            // Diagnóstico de latencia real
+            const base   = audioContext.baseLatency   ? (audioContext.baseLatency   * 1000).toFixed(1) : '?';
+            const output = audioContext.outputLatency ? (audioContext.outputLatency * 1000).toFixed(1) : '?';
+            latencyInfo.textContent = `latencia: base ${base} ms + out ${output} ms`;
+        }
+
+        // 🟠/🔴 Pre-calentar en el primer pointerdown (capturado antes del click)
+        async function prewarmAudio() {
+            if (prewarmed) return;
+            prewarmed = true;
+            createAudioGraph();
+            if (audioContext.state === 'suspended') {
+                try { await audioContext.resume(); } catch (e) { /* noop */ }
+            }
+        }
+        document.addEventListener('pointerdown', prewarmAudio, { once: true, capture: true });
+        document.addEventListener('touchstart', prewarmAudio, { once: true, capture: true, passive: true });
+
+        // ========== CAMBIO DE ACORDE (🟠 con guard) ==========
+        function setChord(chordName) {
+            if (chordName === currentChord) return;   // ← evita re-programar 9 params @60fps
+            if (!CHORDS[chordName] || !notes.length) return;
+            currentChord = chordName;
+            chordDisplay.innerText = chordName;
+            const f = CHORDS[chordName];
+            for (let i = 0; i < 3; i++) notes[i].setBaseFrequency(f[i]);
+        }
+
+        // ========== VOLUMEN DESDE EL GIRO (🟡 llamada desde devicemotion) ==========
+        function updateVolumesFromRotation() {
+            if (!powerOn || !notes.length || !audioContext) return;
+
+            const totalSpeed = Math.abs(rotX) + Math.abs(rotY) + Math.abs(rotZ);
+            let targets = [0, 0, 0];
+
+            if (totalSpeed >= MIN_SPEED_THRESHOLD) {
+                targets[0] = Math.min(1, Math.abs(rotY) / MAX_ROTATION_SPEED); // XZ → fundamental
+                targets[1] = Math.min(1, Math.abs(rotX) / MAX_ROTATION_SPEED); // YZ → tercera
+                targets[2] = Math.min(1, Math.abs(rotZ) / MAX_ROTATION_SPEED); // XY → séptima
+                targets = targets.map(g => Math.pow(g, 1.2));
+            }
+
+            for (let i = 0; i < 3; i++) notes[i].setVolume(targets[i]);
+        }
+
+        // ========== SENSOR (🟡 aquí se aplica el volumen, sin rAF) ==========
+        function handleDeviceMotion(event) {
+            const rot = event.rotationRate;
+            if (!rot) return;
+            rotZ = rot.alpha ?? 0;
+            rotX = rot.beta  ?? 0;
+            rotY = rot.gamma ?? 0;
+
+            if (powerOn) updateVolumesFromRotation();
+        }
+
+        function startMotionListener() {
+            if (motionListenerActive) return;
+            motionListenerActive = true;
+            if (!window.DeviceMotionEvent) { alert('Este dispositivo no soporta eventos de movimiento.'); return; }
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(s => { if (s === 'granted') window.addEventListener('devicemotion', handleDeviceMotion); })
+                    .catch(console.error);
+            } else {
+                window.addEventListener('devicemotion', handleDeviceMotion);
+            }
+        }
+
+        // ========== BLOQUEO DE ORIENTACIÓN (fire-and-forget, sin await) ==========
+        async function lockOrientation() {
             try {
-                // 1. Crear contexto con hint de baja latencia
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-
-                // 2. Crear nodos (se pueden hacer aunque el contexto esté suspendido)
-                filterNode = audioContext.createBiquadFilter();
-                filterNode.type = 'lowpass';
-                filterNode.frequency.value = 2000;
-                filterNode.Q.value = 0.7;
-
-                masterGainNode = audioContext.createGain();
-                masterGainNode.gain.value = 0.5;
-
-                masterGainNode.connect(filterNode);
-                filterNode.connect(audioContext.destination);
-
-                for (let noteName in notes) {
-                    const note = notes[noteName];
-                    const gainNode = audioContext.createGain();
-                    gainNode.gain.value = 0;
-                    gainNode.connect(masterGainNode);
-                    note.gainNode = gainNode;
-
-                    for (let i = 0; i < note.frequencies.length; i++) {
-                        const osc = audioContext.createOscillator();
-                        osc.type = 'sine';
-                        osc.frequency.value = note.frequencies[i];
-
-                        const oscGain = audioContext.createGain();
-                        oscGain.gain.value = note.gains[i];
-
-                        osc.connect(oscGain);
-                        oscGain.connect(gainNode);
-                        osc.start();
-                        note.oscillators.push(osc);
-                    }
+                if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
                 }
-
-                // 3. Reanudar inmediatamente (dentro del evento de clic)
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('portrait');
                 }
-            } catch (e) {
-                console.error('Error al inicializar audio:', e);
-                alert('No se pudo inicializar el audio.');
+            } catch (err) {
+                console.warn('No se pudo bloquear la orientación:', err);
             }
         }
-
-        // Detener audio y limpiar
-        function stopAudio() {
-            // Cancelar bucle RAF
-            if (rafId) {
-                cancelAnimationFrame(rafId);
-                rafId = null;
-            }
-
-            for (let noteName in notes) {
-                const note = notes[noteName];
-                note.oscillators.forEach(osc => {
-                    try {
-                        osc.stop();
-                        osc.disconnect();
-                    } catch (e) {}
-                });
-                note.oscillators = [];
-                if (note.gainNode) {
-                    note.gainNode.disconnect();
-                    note.gainNode = null;
-                }
-            }
-            if (masterGainNode) {
-                masterGainNode.disconnect();
-                masterGainNode = null;
-            }
-            if (filterNode) {
-                filterNode.disconnect();
-                filterNode = null;
-            }
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
+        async function unlockOrientation() {
+            try {
+                if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+                if (document.fullscreenElement) await document.exitFullscreen();
+            } catch (err) { /* noop */ }
         }
 
-        // Bucle de actualización (requestAnimationFrame)
-        function updateAudioAndUI() {
-            if (!isOn || !audioContext) {
-                // Si está apagado, aseguramos que el bucle se detenga
-                if (rafId) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
+        // ========== BOTÓN ON/OFF (sin await en la ruta de audio) ==========
+        powerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            if (powerOn) {
+                // ---- APAGAR ----
+                powerOn = false;
+                powerBtn.classList.remove('on');
+                powerBtn.innerText = 'OFF';
+                if (masterGain && audioContext) {
+                    const now = audioContext.currentTime;
+                    const p = masterGain.gain;
+                    holdParam(p, now);
+                    p.linearRampToValueAtTime(0, now + VOLUME_RAMP_TIME);
                 }
+                unlockOrientation().catch(() => {});
                 return;
             }
 
+            // ---- ENCENDER ----
+            powerOn = true;
+            powerBtn.classList.add('on');
+            powerBtn.innerText = 'ON';
+
+            // 1) Lock de orientación sin bloquear la ruta de audio
+            lockOrientation().catch(() => {});
+
+            // 2) Grafo + resume (si ya se pre-calentó, resume() es instantáneo)
+            createAudioGraph();
+            if (audioContext.state !== 'running') {
+                audioContext.resume().catch(console.warn); // no-await: no bloquea la rampa
+            }
+
+            // 3) Master gain con rampa corta (15 ms)
             const now = audioContext.currentTime;
-            const attackTime = 0.01;  // 10 ms (entre 0.005 y 0.015)
-            const releaseTime = 0.01; // 10 ms
+            const p = masterGain.gain;
+            holdParam(p, now);
+            p.linearRampToValueAtTime(0.5, now + MASTER_RAMP_TIME);
 
-            // Leer los últimos valores del sensor
-            let gamma = lastGamma, beta = lastBeta, alpha = lastAlpha;
+            // 4) Listener de movimiento (idempotente)
+            startMotionListener();
+        });
 
-            // Actualizar UI numérica
-            speedGammaSpan.textContent = Math.round(gamma);
-            speedBetaSpan.textContent = Math.round(beta);
-            speedAlphaSpan.textContent = Math.round(alpha);
-
-            // Calcular volumen (0-1)
-            let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
-            let volBeta = Math.min(beta / MAX_SPEED, 1.0);
-            let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
-
-            // Aplicar umbral de silencio
-            if (gamma < threshold) volGamma = 0;
-            if (beta < threshold) volBeta = 0;
-            if (alpha < threshold) volAlpha = 0;
-
-            // Aplicar cambios de ganancia con suavizado exponencial (ataque/liberación rápidos)
-            if (notes.la.gainNode) {
-                notes.la.gainNode.gain.setTargetAtTime(volGamma, now, volGamma > 0 ? attackTime : releaseTime);
-            }
-            if (notes.sol.gainNode) {
-                notes.sol.gainNode.gain.setTargetAtTime(volBeta, now, volBeta > 0 ? attackTime : releaseTime);
-            }
-            if (notes.mi.gainNode) {
-                notes.mi.gainNode.gain.setTargetAtTime(volAlpha, now, volAlpha > 0 ? attackTime : releaseTime);
-            }
-
-            // Actualizar barras visuales (con el mismo valor para consistencia)
-            volGammaFill.style.width = (volGamma * 100) + '%';
-            volBetaFill.style.width = (volBeta * 100) + '%';
-            volAlphaFill.style.width = (volAlpha * 100) + '%';
-
-            // Próximo frame
-            rafId = requestAnimationFrame(updateAudioAndUI);
+        // ========== DIBUJO DEL SLIDER ==========
+        function bezierPoint(t) {
+            const mt = 1 - t;
+            return {
+                x: mt*mt * P0.x + 2 * mt * t * P1.x + t*t * P2.x,
+                y: mt*mt * P0.y + 2 * mt * t * P1.y + t*t * P2.y
+            };
         }
 
-        // Manejador de movimiento (solo actualiza variables)
-        function handleMotion(event) {
-            if (!isOn) return; // Solo leer si el sintetizador está encendido (ahorra CPU)
-
-            const rotation = event.rotationRate;
-            if (!rotation) return;
-
-            // Actualizar valores (si no existen, se usa 0)
-            lastGamma = Math.abs(rotation.gamma || 0);
-            lastBeta = Math.abs(rotation.beta || 0);
-            lastAlpha = Math.abs(rotation.alpha || 0);
+        function findTFromPoint(px, py) {
+            let low = 0, high = 1;
+            for (let i = 0; i < 10; i++) {
+                const t1 = low + (high - low) / 3;
+                const t2 = high - (high - low) / 3;
+                const p1 = bezierPoint(t1), p2 = bezierPoint(t2);
+                const d1 = Math.hypot(p1.x - px, p1.y - py);
+                const d2 = Math.hypot(p2.x - px, p2.y - py);
+                if (d1 < d2) high = t2; else low = t1;
+            }
+            return (low + high) / 2;
         }
 
-        // Solicitar permisos de movimiento (iOS)
-        function requestMotionPermission() {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                DeviceMotionEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('devicemotion', handleMotion);
-                        } else {
-                            alert('Permiso denegado para usar el giroscopio.');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                window.addEventListener('devicemotion', handleMotion);
-            }
+        function drawSlider() {
+            ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx2d.beginPath();
+            ctx2d.moveTo(P0.x, P0.y);
+            ctx2d.quadraticCurveTo(P1.x, P1.y, P2.x, P2.y);
+            ctx2d.strokeStyle = '#5f7b9c';
+            ctx2d.lineWidth = 4;
+            ctx2d.setLineDash([8, 8]);
+            ctx2d.stroke();
+            ctx2d.setLineDash([]);
+
+            ctx2d.font = 'bold 14px "Segoe UI"';
+            ctx2d.fillStyle = '#aab9d4';
+            ctx2d.fillText('A7', 110, 160);
+            ctx2d.fillText('D7', 220, 80);
+            ctx2d.fillText('E7', 270, 20);
+
+            const pos = bezierPoint(handleT);
+            ctx2d.shadowColor = '#00000080';
+            ctx2d.shadowBlur = 12;
+            ctx2d.shadowOffsetY = 3;
+            ctx2d.beginPath();
+            ctx2d.arc(pos.x, pos.y, handleRadius, 0, 2 * Math.PI);
+            ctx2d.fillStyle = '#f5c542';
+            ctx2d.fill();
+
+            ctx2d.shadowBlur = 6;
+            ctx2d.beginPath();
+            ctx2d.arc(pos.x, pos.y, handleRadius - 5, 0, 2 * Math.PI);
+            ctx2d.fillStyle = '#ffec9e';
+            ctx2d.fill();
+            ctx2d.shadowColor = 'transparent';
         }
 
-        // Botón encender/apagar
-        powerButton.addEventListener('click', async () => {
-            if (!isOn) {
-                await initAudio();
-                if (audioContext) {
-                    isOn = true;
-                    powerButton.textContent = '🔇 APAGAR';
-                    powerButton.classList.add('off');
-                    statusText.textContent = 'Encendido - Gira el dispositivo';
+        // ========== DRAG DEL SLIDER ==========
+        let isDragging = false;
 
-                    // Iniciar bucle de actualización si no está corriendo
-                    if (!rafId) {
-                        rafId = requestAnimationFrame(updateAudioAndUI);
-                    }
-                }
-            } else {
-                stopAudio();
-                isOn = false;
-                powerButton.textContent = '🔊 ENCENDER';
-                powerButton.classList.remove('off');
-                statusText.textContent = 'Apagado';
-                // Las barras se limpian en stopAudio (opcional, pero lo hacemos aquí también)
-                volGammaFill.style.width = '0%';
-                volBetaFill.style.width = '0%';
-                volAlphaFill.style.width = '0%';
-                speedGammaSpan.textContent = '0';
-                speedBetaSpan.textContent = '0';
-                speedAlphaSpan.textContent = '0';
-            }
-        });
+        function localPoint(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const sx = canvas.width / rect.width;
+            const sy = canvas.height / rect.height;
+            return { x: (clientX - rect.left) * sx, y: (clientY - rect.top) * sy };
+        }
 
-        // Iniciar escucha al cargar la página
-        window.addEventListener('load', () => {
-            requestMotionPermission();
-        });
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const p = localPoint(touch.clientX, touch.clientY);
+            const h = bezierPoint(handleT);
+            if (Math.hypot(p.x - h.x, p.y - h.y) <= handleRadius * 1.5) isDragging = true;
+        }
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            const p = localPoint(touch.clientX, touch.clientY);
+            handleT = Math.min(1, Math.max(0, findTFromPoint(p.x, p.y)));
+            if (handleT < 0.33) setChord('A7');
+            else if (handleT < 0.66) setChord('D7');
+            else setChord('E7');
+            drawSlider();
+        }
+        function handleTouchEnd(e) { e.preventDefault(); isDragging = false; }
 
-        // Reintentar permisos al pulsar el botón (por si acaso)
-        powerButton.addEventListener('click', () => {
-            if (!window.hasMotionListener) {
-                window.hasMotionListener = true;
-                requestMotionPermission();
-            }
-        });
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
+        canvas.addEventListener('touchcancel', handleTouchEnd);
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Pausar cuando la página no es visible (ahorra batería)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // Cancelar bucle y silenciar audio
-                if (rafId) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                }
-                if (isOn && audioContext) {
-                    const now = audioContext.currentTime;
-                    if (notes.la.gainNode) notes.la.gainNode.gain.setTargetAtTime(0, now, 0.01);
-                    if (notes.sol.gainNode) notes.sol.gainNode.gain.setTargetAtTime(0, now, 0.01);
-                    if (notes.mi.gainNode) notes.mi.gainNode.gain.setTargetAtTime(0, now, 0.01);
-                }
-            } else {
-                // Al volver a la página, reiniciar bucle si está encendido
-                if (isOn && audioContext && !rafId) {
-                    rafId = requestAnimationFrame(updateAudioAndUI);
-                }
-            }
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const p = localPoint(e.clientX, e.clientY);
+            const h = bezierPoint(handleT);
+            if (Math.hypot(p.x - h.x, p.y - h.y) <= handleRadius * 1.5) isDragging = true;
         });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const p = localPoint(e.clientX, e.clientY);
+            handleT = Math.min(1, Math.max(0, findTFromPoint(p.x, p.y)));
+            if (handleT < 0.33) setChord('A7');
+            else if (handleT < 0.66) setChord('D7');
+            else setChord('E7');
+            drawSlider();
+        });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        drawSlider();
+    })();
     </script>
 </body>
 </html>
