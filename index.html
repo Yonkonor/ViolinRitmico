@@ -24,23 +24,32 @@
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             width: 90%;
-            max-width: 400px;
+            max-width: 440px;
         }
         h1 {
             font-size: 1.3rem;
             margin-bottom: 1rem;
             color: #0f3460;
         }
+        .main-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 58px;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
         .sensor-row {
             display: flex;
             justify-content: space-around;
             margin: 0.5rem 0;
+            flex-direction: column;
+            gap: 0.5rem;
         }
         .sensor-card {
             background: #0f3460;
             border-radius: 10px;
             padding: 0.5rem;
-            width: 30%;
+            width: 100%;
+            box-sizing: border-box;
             box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
         }
         .sensor-label {
@@ -69,6 +78,33 @@
             font-size: 0.7rem;
             margin-top: 0.2rem;
         }
+        .tuning-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            min-width: 0;
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 0.5rem 0.2rem;
+        }
+        .tuning-control label,
+        .octave-mark,
+        .tuning-control output {
+            font-size: 0.7rem;
+            color: #ddd;
+            text-align: center;
+        }
+        #transposeSlider {
+            writing-mode: vertical-lr;
+            direction: rtl;
+            width: 32px;
+            height: 230px;
+            margin: 0;
+            accent-color: #e94560;
+            touch-action: none;
+        }
         button {
             background: #e94560;
             color: white;
@@ -96,44 +132,83 @@
             color: #888;
             margin-top: 1rem;
         }
+
+        @media (orientation: portrait) and (max-width: 600px) {
+            .main-layout .sensor-row {
+                flex-direction: column;
+                gap: 0.4rem;
+                margin: 0;
+            }
+
+            .main-layout .sensor-card {
+                box-sizing: border-box;
+                width: 100%;
+                padding: 0.4rem;
+            }
+
+            #transposeSlider {
+                height: 280px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎛️ Sintetizador 3 Notas - Baja Latencia</h1>
-        <div class="sensor-row">
-            <div class="sensor-card">
-                <div class="sensor-label">La (XZ)</div>
-                <div class="sensor-value" id="speedGamma">0</div>
-                <div class="volume-indicator">
-                    <div id="volGammaFill" class="volume-fill"></div>
+
+        <div class="main-layout">
+            <div class="sensor-row">
+                <div class="sensor-card">
+                    <div class="sensor-label">La (XZ)</div>
+                    <div class="sensor-value" id="speedGamma">0</div>
+                    <div class="volume-indicator">
+                        <div id="volGammaFill" class="volume-fill"></div>
+                    </div>
+                    <div class="note-label" id="labelGamma">220 Hz</div>
                 </div>
-                <div class="note-label">220 Hz</div>
+
+                <div class="sensor-card">
+                    <div class="sensor-label">Sol (YZ)</div>
+                    <div class="sensor-value" id="speedBeta">0</div>
+                    <div class="volume-indicator">
+                        <div id="volBetaFill" class="volume-fill"></div>
+                    </div>
+                    <div class="note-label" id="labelBeta">196 Hz</div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-label">Mi (XY)</div>
+                    <div class="sensor-value" id="speedAlpha">0</div>
+                    <div class="volume-indicator">
+                        <div id="volAlphaFill" class="volume-fill"></div>
+                    </div>
+                    <div class="note-label" id="labelAlpha">165 Hz</div>
+                </div>
             </div>
-            <div class="sensor-card">
-                <div class="sensor-label">Sol (YZ)</div>
-                <div class="sensor-value" id="speedBeta">0</div>
-                <div class="volume-indicator">
-                    <div id="volBetaFill" class="volume-fill"></div>
-                </div>
-                <div class="note-label">196 Hz</div>
-            </div>
-            <div class="sensor-card">
-                <div class="sensor-label">Mi (XY)</div>
-                <div class="sensor-value" id="speedAlpha">0</div>
-                <div class="volume-indicator">
-                    <div id="volAlphaFill" class="volume-fill"></div>
-                </div>
-                <div class="note-label">165 Hz</div>
+
+            <div class="tuning-control">
+                <label for="transposeSlider">Afinación</label>
+                <span class="octave-mark">+6</span>
+                <input
+                    id="transposeSlider"
+                    type="range"
+                    min="-6"
+                    max="6"
+                    step="0.1"
+                    value="0"
+                    aria-label="Desplazar las notas hasta una octava"
+                >
+                <span class="octave-mark">−6</span>
+                <output id="transposeValue" for="transposeSlider">0 st</output>
             </div>
         </div>
+
         <button id="powerButton">🔊 ENCENDER</button>
         <div class="status" id="statusText">Apagado</div>
         <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Respuesta ultrarrápida.</div>
     </div>
 
     <script>
-        // Elementos del DOM
         const speedGammaSpan = document.getElementById('speedGamma');
         const speedBetaSpan = document.getElementById('speedBeta');
         const speedAlphaSpan = document.getElementById('speedAlpha');
@@ -142,36 +217,89 @@
         const volAlphaFill = document.getElementById('volAlphaFill');
         const powerButton = document.getElementById('powerButton');
         const statusText = document.getElementById('statusText');
+        const transposeSlider = document.getElementById('transposeSlider');
+        const transposeValue = document.getElementById('transposeValue');
+        const labelGamma = document.getElementById('labelGamma');
+        const labelBeta = document.getElementById('labelBeta');
+        const labelAlpha = document.getElementById('labelAlpha');
 
-        // Variables de audio
         let audioContext = null;
         let masterGainNode = null;
         let filterNode = null;
 
-        // Estructura para cada nota
         const notes = {
-            la: { gainNode: null, oscillators: [], frequencies: [220, 440, 660], gains: [0.5, 0.25, 0.15] },
-            sol: { gainNode: null, oscillators: [], frequencies: [196, 392, 588], gains: [0.5, 0.25, 0.15] },
-            mi: { gainNode: null, oscillators: [], frequencies: [165, 330, 495], gains: [0.5, 0.25, 0.15] }
+            la: {
+                gainNode: null,
+                oscillators: [],
+                frequencies: [220, 440, 660],
+                gains: [0.5, 0.25, 0.15],
+                label: labelGamma
+            },
+            sol: {
+                gainNode: null,
+                oscillators: [],
+                frequencies: [196, 392, 588],
+                gains: [0.5, 0.25, 0.15],
+                label: labelBeta
+            },
+            mi: {
+                gainNode: null,
+                oscillators: [],
+                frequencies: [165, 330, 495],
+                gains: [0.5, 0.25, 0.15],
+                label: labelAlpha
+            }
         };
 
         let isOn = false;
-        const MAX_SPEED = 360; // grados/segundo para volumen máximo
-        const threshold = 10;   // umbral para silencio total
+        const MAX_SPEED = 360;
+        const threshold = 10;
 
-        // Variables para desacoplar sensor de audio (requestAnimationFrame)
         let lastGamma = 0, lastBeta = 0, lastAlpha = 0;
         let rafId = null;
 
-        // Inicializar audio con baja latencia
+        function updateNoteLabels() {
+            const semitones = Number(transposeSlider.value);
+            const centerMult = Math.pow(2, semitones / 12);
+
+            const showFrequency = (base, idx) => {
+                const value = base * centerMult;
+                return `${value.toFixed(0)} Hz`;
+            };
+
+            labelGamma.textContent = `${showFrequency(220, 0)}`;
+            labelBeta.textContent = `${showFrequency(196, 0)}`;
+            labelAlpha.textContent = `${showFrequency(165, 0)}`;
+        }
+
+        function applyTransposition() {
+            const semitones = Number(transposeSlider.value);
+            const sign = semitones > 0 ? '+' : '';
+            transposeValue.textContent = `${sign}${semitones.toFixed(1)} st`;
+
+            updateNoteLabels();
+
+            if (!audioContext) return;
+
+            const now = audioContext.currentTime;
+            const multiplier = Math.pow(2, semitones / 12);
+
+            Object.values(notes).forEach(note => {
+                note.oscillators.forEach((oscillator, index) => {
+                    const frequency = note.frequencies[index] * multiplier;
+                    oscillator.frequency.setTargetAtTime(frequency, now, 0.02);
+                });
+            });
+        }
+
+        transposeSlider.addEventListener('input', applyTransposition);
+
         async function initAudio() {
             if (audioContext) return;
 
             try {
-                // 1. Crear contexto con hint de baja latencia
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 
-                // 2. Crear nodos (se pueden hacer aunque el contexto esté suspendido)
                 filterNode = audioContext.createBiquadFilter();
                 filterNode.type = 'lowpass';
                 filterNode.frequency.value = 2000;
@@ -205,7 +333,8 @@
                     }
                 }
 
-                // 3. Reanudar inmediatamente (dentro del evento de clic)
+                applyTransposition();
+
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
@@ -215,9 +344,7 @@
             }
         }
 
-        // Detener audio y limpiar
         function stopAudio() {
-            // Cancelar bucle RAF
             if (rafId) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
@@ -237,6 +364,7 @@
                     note.gainNode = null;
                 }
             }
+
             if (masterGainNode) {
                 masterGainNode.disconnect();
                 masterGainNode = null;
@@ -251,10 +379,8 @@
             }
         }
 
-        // Bucle de actualización (requestAnimationFrame)
         function updateAudioAndUI() {
             if (!isOn || !audioContext) {
-                // Si está apagado, aseguramos que el bucle se detenga
                 if (rafId) {
                     cancelAnimationFrame(rafId);
                     rafId = null;
@@ -263,28 +389,23 @@
             }
 
             const now = audioContext.currentTime;
-            const attackTime = 0.01;  // 10 ms (entre 0.005 y 0.015)
-            const releaseTime = 0.01; // 10 ms
+            const attackTime = 0.01;
+            const releaseTime = 0.01;
 
-            // Leer los últimos valores del sensor
             let gamma = lastGamma, beta = lastBeta, alpha = lastAlpha;
 
-            // Actualizar UI numérica
             speedGammaSpan.textContent = Math.round(gamma);
             speedBetaSpan.textContent = Math.round(beta);
             speedAlphaSpan.textContent = Math.round(alpha);
 
-            // Calcular volumen (0-1)
             let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
             let volBeta = Math.min(beta / MAX_SPEED, 1.0);
             let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
 
-            // Aplicar umbral de silencio
             if (gamma < threshold) volGamma = 0;
             if (beta < threshold) volBeta = 0;
             if (alpha < threshold) volAlpha = 0;
 
-            // Aplicar cambios de ganancia con suavizado exponencial (ataque/liberación rápidos)
             if (notes.la.gainNode) {
                 notes.la.gainNode.gain.setTargetAtTime(volGamma, now, volGamma > 0 ? attackTime : releaseTime);
             }
@@ -295,29 +416,24 @@
                 notes.mi.gainNode.gain.setTargetAtTime(volAlpha, now, volAlpha > 0 ? attackTime : releaseTime);
             }
 
-            // Actualizar barras visuales (con el mismo valor para consistencia)
             volGammaFill.style.width = (volGamma * 100) + '%';
             volBetaFill.style.width = (volBeta * 100) + '%';
             volAlphaFill.style.width = (volAlpha * 100) + '%';
 
-            // Próximo frame
             rafId = requestAnimationFrame(updateAudioAndUI);
         }
 
-        // Manejador de movimiento (solo actualiza variables)
         function handleMotion(event) {
-            if (!isOn) return; // Solo leer si el sintetizador está encendido (ahorra CPU)
+            if (!isOn) return;
 
             const rotation = event.rotationRate;
             if (!rotation) return;
 
-            // Actualizar valores (si no existen, se usa 0)
             lastGamma = Math.abs(rotation.gamma || 0);
             lastBeta = Math.abs(rotation.beta || 0);
             lastAlpha = Math.abs(rotation.alpha || 0);
         }
 
-        // Solicitar permisos de movimiento (iOS)
         function requestMotionPermission() {
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                 DeviceMotionEvent.requestPermission()
@@ -334,7 +450,6 @@
             }
         }
 
-        // Botón encender/apagar
         powerButton.addEventListener('click', async () => {
             if (!isOn) {
                 await initAudio();
@@ -344,7 +459,6 @@
                     powerButton.classList.add('off');
                     statusText.textContent = 'Encendido - Gira el dispositivo';
 
-                    // Iniciar bucle de actualización si no está corriendo
                     if (!rafId) {
                         rafId = requestAnimationFrame(updateAudioAndUI);
                     }
@@ -355,7 +469,6 @@
                 powerButton.textContent = '🔊 ENCENDER';
                 powerButton.classList.remove('off');
                 statusText.textContent = 'Apagado';
-                // Las barras se limpian en stopAudio (opcional, pero lo hacemos aquí también)
                 volGammaFill.style.width = '0%';
                 volBetaFill.style.width = '0%';
                 volAlphaFill.style.width = '0%';
@@ -365,12 +478,11 @@
             }
         });
 
-        // Iniciar escucha al cargar la página
         window.addEventListener('load', () => {
             requestMotionPermission();
+            updateNoteLabels();
         });
 
-        // Reintentar permisos al pulsar el botón (por si acaso)
         powerButton.addEventListener('click', () => {
             if (!window.hasMotionListener) {
                 window.hasMotionListener = true;
@@ -378,10 +490,8 @@
             }
         });
 
-        // Pausar cuando la página no es visible (ahorra batería)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                // Cancelar bucle y silenciar audio
                 if (rafId) {
                     cancelAnimationFrame(rafId);
                     rafId = null;
@@ -393,7 +503,6 @@
                     if (notes.mi.gainNode) notes.mi.gainNode.gain.setTargetAtTime(0, now, 0.01);
                 }
             } else {
-                // Al volver a la página, reiniciar bucle si está encendido
                 if (isOn && audioContext && !rafId) {
                     rafId = requestAnimationFrame(updateAudioAndUI);
                 }
