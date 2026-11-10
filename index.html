@@ -3,161 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sintetizador 3 Notas - Baja Latencia</title>
+    <title>Sintetizador de 3 notas</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            background: #1a1a2e;
-            color: #fff;
+            min-height: 100vh;
+            padding: 1rem 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            touch-action: none;
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
         }
+
         .container {
+            width: min(94vw, 520px);
+            padding: 1.25rem;
             text-align: center;
             background: #16213e;
-            padding: 1.5rem;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            width: 90%;
-            max-width: 440px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
+
         h1 {
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
-            color: #0f3460;
+            margin: 0 0 1rem;
+            color: #fff;
+            font-size: 1.25rem;
         }
-        .main-layout {
+
+        .instrument-layout {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 58px;
-            gap: 0.5rem;
-            align-items: stretch;
+            grid-template-columns: minmax(110px, 0.8fr) minmax(170px, 1.2fr);
+            gap: 0.7rem;
+            align-items: center;
         }
+
         .sensor-row {
             display: flex;
-            justify-content: space-around;
-            margin: 0.5rem 0;
             flex-direction: column;
             gap: 0.5rem;
+            min-width: 0;
+            margin: 0;
         }
+
         .sensor-card {
+            width: 100%;
+            padding: 0.55rem 0.45rem;
             background: #0f3460;
             border-radius: 10px;
-            padding: 0.5rem;
-            width: 100%;
-            box-sizing: border-box;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
         }
+
         .sensor-label {
+            color: #ddd;
             font-size: 0.8rem;
-            color: #aaa;
         }
+
         .sensor-value {
+            margin-top: 0.2rem;
             font-size: 1.2rem;
             font-weight: bold;
         }
+
         .volume-indicator {
             width: 100%;
             height: 8px;
+            margin: 0.45rem 0;
+            overflow: hidden;
             background: #53354a;
             border-radius: 4px;
-            overflow: hidden;
-            margin: 0.5rem 0;
         }
+
         .volume-fill {
-            height: 100%;
             width: 0%;
+            height: 100%;
             background: #e94560;
-            transition: width 0.05s ease;
+            transition: width 0.05s linear;
         }
+
         .note-label {
-            font-size: 0.7rem;
             margin-top: 0.2rem;
+            font-size: 0.75rem;
         }
-        .tuning-control {
+
+        .controls {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.35rem;
+            gap: 0.85rem;
             min-width: 0;
+        }
+
+        .control-card {
+            padding: 0.8rem;
             background: #0f3460;
             border-radius: 10px;
-            padding: 0.5rem 0.2rem;
         }
-        .tuning-control label,
-        .octave-mark,
-        .tuning-control output {
-            font-size: 0.7rem;
+
+        .control-card label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.4rem;
+            margin-top: 0.65rem;
             color: #ddd;
-            text-align: center;
+            font-size: 0.68rem;
         }
-        #transposeSlider {
-            writing-mode: vertical-lr;
-            direction: rtl;
-            width: 32px;
-            height: 230px;
-            margin: 0;
-            accent-color: #e94560;
-            touch-action: none;
-        }
-        button {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            font-size: 1.5rem;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 1rem 0;
+
+        .control-card input[type="range"] {
+            display: block;
             width: 100%;
+            height: 28px;
+            margin: 0.5rem 0;
+            accent-color: #e94560;
+            touch-action: pan-x;
+        }
+
+        .control-card output {
+            display: block;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        button {
+            width: 100%;
+            margin: 1rem 0 0.7rem;
+            padding: 0.9rem 1rem;
+            border: 0;
+            border-radius: 50px;
+            background: #e94560;
+            color: #fff;
+            font-size: 1.25rem;
+            cursor: pointer;
             transition: transform 0.2s;
         }
+
         button:active {
-            transform: scale(0.95);
+            transform: scale(0.97);
         }
+
         button.off {
             background: #4a4a4a;
         }
+
         .status {
-            font-size: 1rem;
-            color: #aaa;
+            min-height: 1.2em;
+            color: #ccc;
+            font-size: 0.9rem;
         }
+
         .note {
-            font-size: 0.7rem;
-            color: #888;
-            margin-top: 1rem;
+            margin-top: 0.8rem;
+            color: #aaa;
+            font-size: 0.75rem;
+            line-height: 1.4;
         }
 
-        @media (orientation: portrait) and (max-width: 600px) {
-            .main-layout .sensor-row {
-                flex-direction: column;
+        @media (max-width: 360px) {
+            .container {
+                padding: 1rem 0.75rem;
+            }
+
+            .instrument-layout {
+                grid-template-columns: minmax(100px, 0.75fr) minmax(145px, 1.25fr);
                 gap: 0.4rem;
-                margin: 0;
             }
 
-            .main-layout .sensor-card {
-                box-sizing: border-box;
-                width: 100%;
-                padding: 0.4rem;
+            .control-card {
+                padding: 0.65rem 0.45rem;
             }
 
-            #transposeSlider {
-                height: 280px;
+            .sensor-card {
+                padding: 0.45rem 0.3rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎛️ Sintetizador 3 Notas - Baja Latencia</h1>
+    <main class="container">
+        <h1>🎛️ Sintetizador de 3 notas</h1>
 
-        <div class="main-layout">
-            <div class="sensor-row">
+        <div class="instrument-layout">
+            <section class="sensor-row" aria-label="Indicadores de movimiento y volumen">
                 <div class="sensor-card">
                     <div class="sensor-label">La (XZ)</div>
                     <div class="sensor-value" id="speedGamma">0</div>
@@ -184,45 +220,78 @@
                     </div>
                     <div class="note-label" id="labelAlpha">165 Hz</div>
                 </div>
-            </div>
+            </section>
 
-            <div class="tuning-control">
-                <label for="transposeSlider">Afinación</label>
-                <span class="octave-mark">+6</span>
-                <input
-                    id="transposeSlider"
-                    type="range"
-                    min="-6"
-                    max="6"
-                    step="0.1"
-                    value="0"
-                    aria-label="Desplazar las notas hasta una octava"
-                >
-                <span class="octave-mark">−6</span>
-                <output id="transposeValue" for="transposeSlider">0 st</output>
-            </div>
+            <section class="controls" aria-label="Controles del sintetizador">
+                <div class="control-card">
+                    <label for="transposeSlider">Afinación</label>
+                    <div class="range-labels">
+                        <span>−6 semitonos</span>
+                        <span>+6 semitonos</span>
+                    </div>
+                    <input
+                        id="transposeSlider"
+                        type="range"
+                        min="-6"
+                        max="6"
+                        step="0.1"
+                        value="0"
+                        aria-label="Afinación, de menos seis a más seis semitonos"
+                    >
+                    <output id="transposeValue" for="transposeSlider">0,0 st</output>
+                </div>
+
+                <div class="control-card">
+                    <label for="volumeSpeedSlider">Respuesta del volumen</label>
+                    <div class="range-labels">
+                        <span>0,1 Hz · lenta</span>
+                        <span>10 Hz · rápida</span>
+                    </div>
+                    <input
+                        id="volumeSpeedSlider"
+                        type="range"
+                        min="0.1"
+                        max="10"
+                        step="0.1"
+                        value="5"
+                        aria-label="Rapidez de respuesta del volumen, entre 0,1 y 10 hercios"
+                    >
+                    <output id="volumeSpeedValue" for="volumeSpeedSlider">5,0 Hz</output>
+                </div>
+            </section>
         </div>
 
-        <button id="powerButton">🔊 ENCENDER</button>
-        <div class="status" id="statusText">Apagado</div>
-        <div class="note">Gira el dispositivo en diferentes ejes para mezclar las notas. Respuesta ultrarrápida.</div>
-    </div>
+        <button id="powerButton" type="button">🔊 ENCENDER</button>
+        <div class="status" id="statusText" role="status">Apagado</div>
+        <div class="note">
+            Gira el dispositivo en diferentes ejes para mezclar las notas.
+            Usa las correderas para cambiar la afinación y la respuesta del volumen.
+        </div>
+    </main>
 
     <script>
+        // Elementos de la página
         const speedGammaSpan = document.getElementById('speedGamma');
         const speedBetaSpan = document.getElementById('speedBeta');
         const speedAlphaSpan = document.getElementById('speedAlpha');
+
         const volGammaFill = document.getElementById('volGammaFill');
         const volBetaFill = document.getElementById('volBetaFill');
         const volAlphaFill = document.getElementById('volAlphaFill');
-        const powerButton = document.getElementById('powerButton');
-        const statusText = document.getElementById('statusText');
-        const transposeSlider = document.getElementById('transposeSlider');
-        const transposeValue = document.getElementById('transposeValue');
+
         const labelGamma = document.getElementById('labelGamma');
         const labelBeta = document.getElementById('labelBeta');
         const labelAlpha = document.getElementById('labelAlpha');
 
+        const powerButton = document.getElementById('powerButton');
+        const statusText = document.getElementById('statusText');
+
+        const transposeSlider = document.getElementById('transposeSlider');
+        const transposeValue = document.getElementById('transposeValue');
+        const volumeSpeedSlider = document.getElementById('volumeSpeedSlider');
+        const volumeSpeedValue = document.getElementById('volumeSpeedValue');
+
+        // Audio
         let audioContext = null;
         let masterGainNode = null;
         let filterNode = null;
@@ -252,37 +321,36 @@
         };
 
         let isOn = false;
-        const MAX_SPEED = 360;
-        const threshold = 10;
-
-        let lastGamma = 0, lastBeta = 0, lastAlpha = 0;
+        let motionListenerAdded = false;
         let rafId = null;
 
-        function updateNoteLabels() {
-            const semitones = Number(transposeSlider.value);
-            const centerMult = Math.pow(2, semitones / 12);
+        // Velocidad angular (grados por segundo) necesaria para volumen máximo.
+        const MAX_SPEED = 360;
+        const SILENCE_THRESHOLD = 10;
 
-            const showFrequency = (base, idx) => {
-                const value = base * centerMult;
-                return `${value.toFixed(0)} Hz`;
-            };
+        let lastGamma = 0;
+        let lastBeta = 0;
+        let lastAlpha = 0;
 
-            labelGamma.textContent = `${showFrequency(220, 0)}`;
-            labelBeta.textContent = `${showFrequency(196, 0)}`;
-            labelAlpha.textContent = `${showFrequency(165, 0)}`;
+        function formatNumber(value, decimals = 1) {
+            return Number(value).toFixed(decimals).replace('.', ',');
         }
 
-        function applyTransposition() {
+        function updateTransposition() {
             const semitones = Number(transposeSlider.value);
+            const multiplier = Math.pow(2, semitones / 12);
             const sign = semitones > 0 ? '+' : '';
-            transposeValue.textContent = `${sign}${semitones.toFixed(1)} st`;
 
-            updateNoteLabels();
+            transposeValue.textContent =
+                `${sign}${formatNumber(semitones)} st`;
+
+            labelGamma.textContent = `${(220 * multiplier).toFixed(1)} Hz`;
+            labelBeta.textContent = `${(196 * multiplier).toFixed(1)} Hz`;
+            labelAlpha.textContent = `${(165 * multiplier).toFixed(1)} Hz`;
 
             if (!audioContext) return;
 
             const now = audioContext.currentTime;
-            const multiplier = Math.pow(2, semitones / 12);
 
             Object.values(notes).forEach(note => {
                 note.oscillators.forEach((oscillator, index) => {
@@ -292,13 +360,28 @@
             });
         }
 
-        transposeSlider.addEventListener('input', applyTransposition);
+        function updateResponseLabel() {
+            const responseHz = Number(volumeSpeedSlider.value);
+            volumeSpeedValue.textContent = `${formatNumber(responseHz)} Hz`;
+        }
+
+        transposeSlider.addEventListener('input', updateTransposition);
+        volumeSpeedSlider.addEventListener('input', updateResponseLabel);
 
         async function initAudio() {
-            if (audioContext) return;
+            if (audioContext) return true;
 
             try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+                const AudioContextClass =
+                    window.AudioContext || window.webkitAudioContext;
+
+                if (!AudioContextClass) {
+                    throw new Error('Este navegador no admite Web Audio.');
+                }
+
+                audioContext = new AudioContextClass({
+                    latencyHint: 'interactive'
+                });
 
                 filterNode = audioContext.createBiquadFilter();
                 filterNode.type = 'lowpass';
@@ -311,54 +394,62 @@
                 masterGainNode.connect(filterNode);
                 filterNode.connect(audioContext.destination);
 
-                for (let noteName in notes) {
-                    const note = notes[noteName];
-                    const gainNode = audioContext.createGain();
-                    gainNode.gain.value = 0;
-                    gainNode.connect(masterGainNode);
-                    note.gainNode = gainNode;
+                for (const note of Object.values(notes)) {
+                    note.gainNode = audioContext.createGain();
+                    note.gainNode.gain.value = 0;
+                    note.gainNode.connect(masterGainNode);
 
-                    for (let i = 0; i < note.frequencies.length; i++) {
-                        const osc = audioContext.createOscillator();
-                        osc.type = 'sine';
-                        osc.frequency.value = note.frequencies[i];
+                    note.oscillators = [];
 
-                        const oscGain = audioContext.createGain();
-                        oscGain.gain.value = note.gains[i];
+                    note.frequencies.forEach((frequency, index) => {
+                        const oscillator = audioContext.createOscillator();
+                        const oscillatorGain = audioContext.createGain();
 
-                        osc.connect(oscGain);
-                        oscGain.connect(gainNode);
-                        osc.start();
-                        note.oscillators.push(osc);
-                    }
+                        oscillator.type = 'sine';
+                        oscillator.frequency.value = frequency;
+                        oscillatorGain.gain.value = note.gains[index];
+
+                        oscillator.connect(oscillatorGain);
+                        oscillatorGain.connect(note.gainNode);
+                        oscillator.start();
+
+                        note.oscillators.push(oscillator);
+                    });
                 }
 
-                applyTransposition();
+                updateTransposition();
 
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
-            } catch (e) {
-                console.error('Error al inicializar audio:', e);
-                alert('No se pudo inicializar el audio.');
+
+                return true;
+            } catch (error) {
+                console.error('Error al inicializar el audio:', error);
+                statusText.textContent = 'No se pudo iniciar el audio.';
+                stopAudio();
+                return false;
             }
         }
 
         function stopAudio() {
-            if (rafId) {
+            if (rafId !== null) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
 
-            for (let noteName in notes) {
-                const note = notes[noteName];
-                note.oscillators.forEach(osc => {
+            for (const note of Object.values(notes)) {
+                note.oscillators.forEach(oscillator => {
                     try {
-                        osc.stop();
-                        osc.disconnect();
-                    } catch (e) {}
+                        oscillator.stop();
+                        oscillator.disconnect();
+                    } catch (error) {
+                        // El oscilador puede haberse detenido ya.
+                    }
                 });
+
                 note.oscillators = [];
+
                 if (note.gainNode) {
                     note.gainNode.disconnect();
                     note.gainNode = null;
@@ -369,145 +460,197 @@
                 masterGainNode.disconnect();
                 masterGainNode = null;
             }
+
             if (filterNode) {
                 filterNode.disconnect();
                 filterNode = null;
             }
+
             if (audioContext) {
-                audioContext.close();
+                const oldContext = audioContext;
                 audioContext = null;
+                oldContext.close().catch(error => {
+                    console.warn('No se pudo cerrar el contexto de audio:', error);
+                });
             }
         }
 
         function updateAudioAndUI() {
             if (!isOn || !audioContext) {
-                if (rafId) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                }
+                rafId = null;
                 return;
             }
 
             const now = audioContext.currentTime;
-            const attackTime = 0.01;
-            const releaseTime = 0.01;
+            const responseHz = Number(volumeSpeedSlider.value);
 
-            let gamma = lastGamma, beta = lastBeta, alpha = lastAlpha;
+            // Convierte el ajuste en Hz en una constante de suavizado
+            // para Web Audio. Más Hz significa respuesta más rápida.
+            const responseTime = 1 / (2 * Math.PI * responseHz);
+
+            const gamma = lastGamma;
+            const beta = lastBeta;
+            const alpha = lastAlpha;
 
             speedGammaSpan.textContent = Math.round(gamma);
             speedBetaSpan.textContent = Math.round(beta);
             speedAlphaSpan.textContent = Math.round(alpha);
 
-            let volGamma = Math.min(gamma / MAX_SPEED, 1.0);
-            let volBeta = Math.min(beta / MAX_SPEED, 1.0);
-            let volAlpha = Math.min(alpha / MAX_SPEED, 1.0);
+            let volumeGamma = Math.min(gamma / MAX_SPEED, 1);
+            let volumeBeta = Math.min(beta / MAX_SPEED, 1);
+            let volumeAlpha = Math.min(alpha / MAX_SPEED, 1);
 
-            if (gamma < threshold) volGamma = 0;
-            if (beta < threshold) volBeta = 0;
-            if (alpha < threshold) volAlpha = 0;
+            if (gamma < SILENCE_THRESHOLD) volumeGamma = 0;
+            if (beta < SILENCE_THRESHOLD) volumeBeta = 0;
+            if (alpha < SILENCE_THRESHOLD) volumeAlpha = 0;
 
             if (notes.la.gainNode) {
-                notes.la.gainNode.gain.setTargetAtTime(volGamma, now, volGamma > 0 ? attackTime : releaseTime);
-            }
-            if (notes.sol.gainNode) {
-                notes.sol.gainNode.gain.setTargetAtTime(volBeta, now, volBeta > 0 ? attackTime : releaseTime);
-            }
-            if (notes.mi.gainNode) {
-                notes.mi.gainNode.gain.setTargetAtTime(volAlpha, now, volAlpha > 0 ? attackTime : releaseTime);
+                notes.la.gainNode.gain.setTargetAtTime(
+                    volumeGamma,
+                    now,
+                    responseTime
+                );
             }
 
-            volGammaFill.style.width = (volGamma * 100) + '%';
-            volBetaFill.style.width = (volBeta * 100) + '%';
-            volAlphaFill.style.width = (volAlpha * 100) + '%';
+            if (notes.sol.gainNode) {
+                notes.sol.gainNode.gain.setTargetAtTime(
+                    volumeBeta,
+                    now,
+                    responseTime
+                );
+            }
+
+            if (notes.mi.gainNode) {
+                notes.mi.gainNode.gain.setTargetAtTime(
+                    volumeAlpha,
+                    now,
+                    responseTime
+                );
+            }
+
+            volGammaFill.style.width = `${volumeGamma * 100}%`;
+            volBetaFill.style.width = `${volumeBeta * 100}%`;
+            volAlphaFill.style.width = `${volumeAlpha * 100}%`;
 
             rafId = requestAnimationFrame(updateAudioAndUI);
         }
 
         function handleMotion(event) {
-            if (!isOn) return;
+            if (!isOn || !event.rotationRate) return;
 
             const rotation = event.rotationRate;
-            if (!rotation) return;
-
             lastGamma = Math.abs(rotation.gamma || 0);
             lastBeta = Math.abs(rotation.beta || 0);
             lastAlpha = Math.abs(rotation.alpha || 0);
         }
 
-        function requestMotionPermission() {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                DeviceMotionEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('devicemotion', handleMotion);
-                        } else {
-                            alert('Permiso denegado para usar el giroscopio.');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
+        async function requestMotionPermission() {
+            if (motionListenerAdded) return true;
+
+            if (typeof DeviceMotionEvent === 'undefined') {
+                statusText.textContent =
+                    'Este navegador no ofrece datos de movimiento.';
+                return false;
+            }
+
+            try {
+                if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                    const permission = await DeviceMotionEvent.requestPermission();
+
+                    if (permission !== 'granted') {
+                        statusText.textContent =
+                            'Permiso de movimiento denegado; el audio sigue disponible.';
+                        return false;
+                    }
+                }
+
                 window.addEventListener('devicemotion', handleMotion);
+                motionListenerAdded = true;
+                return true;
+            } catch (error) {
+                console.error('No se pudo obtener permiso de movimiento:', error);
+                statusText.textContent =
+                    'No se pudo acceder al sensor de movimiento.';
+                return false;
             }
         }
 
         powerButton.addEventListener('click', async () => {
-            if (!isOn) {
-                await initAudio();
-                if (audioContext) {
-                    isOn = true;
-                    powerButton.textContent = '🔇 APAGAR';
-                    powerButton.classList.add('off');
-                    statusText.textContent = 'Encendido - Gira el dispositivo';
-
-                    if (!rafId) {
-                        rafId = requestAnimationFrame(updateAudioAndUI);
-                    }
-                }
-            } else {
-                stopAudio();
+            if (isOn) {
                 isOn = false;
+                stopAudio();
+
                 powerButton.textContent = '🔊 ENCENDER';
                 powerButton.classList.remove('off');
                 statusText.textContent = 'Apagado';
-                volGammaFill.style.width = '0%';
-                volBetaFill.style.width = '0%';
-                volAlphaFill.style.width = '0%';
+
+                lastGamma = 0;
+                lastBeta = 0;
+                lastAlpha = 0;
+
                 speedGammaSpan.textContent = '0';
                 speedBetaSpan.textContent = '0';
                 speedAlphaSpan.textContent = '0';
+
+                volGammaFill.style.width = '0%';
+                volBetaFill.style.width = '0%';
+                volAlphaFill.style.width = '0%';
+                return;
             }
-        });
 
-        window.addEventListener('load', () => {
-            requestMotionPermission();
-            updateNoteLabels();
-        });
+            // Solicitar permiso directamente desde la acción del usuario,
+            // como requieren algunos navegadores móviles.
+            const motionPermission = requestMotionPermission();
+            const audioReady = await initAudio();
 
-        powerButton.addEventListener('click', () => {
-            if (!window.hasMotionListener) {
-                window.hasMotionListener = true;
-                requestMotionPermission();
+            if (!audioReady) return;
+
+            isOn = true;
+            const motionReady = await motionPermission;
+
+            powerButton.textContent = '🔇 APAGAR';
+            powerButton.classList.add('off');
+
+            statusText.textContent = motionReady
+                ? 'Encendido — gira el dispositivo'
+                : 'Audio encendido; sensor de movimiento no disponible';
+
+            if (rafId === null) {
+                rafId = requestAnimationFrame(updateAudioAndUI);
             }
         });
 
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                if (rafId) {
+                if (rafId !== null) {
                     cancelAnimationFrame(rafId);
                     rafId = null;
                 }
+
+                lastGamma = 0;
+                lastBeta = 0;
+                lastAlpha = 0;
+
                 if (isOn && audioContext) {
                     const now = audioContext.currentTime;
-                    if (notes.la.gainNode) notes.la.gainNode.gain.setTargetAtTime(0, now, 0.01);
-                    if (notes.sol.gainNode) notes.sol.gainNode.gain.setTargetAtTime(0, now, 0.01);
-                    if (notes.mi.gainNode) notes.mi.gainNode.gain.setTargetAtTime(0, now, 0.01);
+
+                    Object.values(notes).forEach(note => {
+                        if (note.gainNode) {
+                            note.gainNode.gain.setTargetAtTime(0, now, 0.02);
+                        }
+                    });
                 }
-            } else {
-                if (isOn && audioContext && !rafId) {
-                    rafId = requestAnimationFrame(updateAudioAndUI);
-                }
+
+                return;
+            }
+
+            if (isOn && audioContext && rafId === null) {
+                rafId = requestAnimationFrame(updateAudioAndUI);
             }
         });
+
+        updateTransposition();
+        updateResponseLabel();
     </script>
 </body>
 </html>
